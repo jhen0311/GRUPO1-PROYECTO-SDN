@@ -128,7 +128,8 @@ def dhcp_lease(mac, k, n, timeout=3.0):
 
 # ------------------------------------------------------------------ 3. Host de Mininet
 def pid_host(nombre):
-    p = subprocess.run(["pgrep", "-f", f"mininet:{nombre}$"], capture_output=True, text=True)
+    # -n: el proceso más reciente (si quedó uno viejo de una topología anterior, se ignora)
+    p = subprocess.run(["pgrep", "-n", "-f", f"mininet:{nombre}$"], capture_output=True, text=True)
     pids = p.stdout.split()
     if not pids:
         raise RuntimeError(f"No encuentro el host {nombre}: ¿está levantada la topología?")
@@ -283,8 +284,10 @@ def estado(log=print):
     filas = {mac_host.get(f[8]): f for f in sesiones_activas()}
     for h in HOSTS:
         f = filas.get(h)
-        log(f"{h:4} {str(ip_host(h) or '-'):16} {len(flows_app(APP_SESION + h)):>6}  "
-            + (f"{f[0]:>6} {f[1]:14} {f[2]:11} {f[4]}" if f else f"{'-':>6} {'(sin sesión)':14}"))
+        n = len(flows_app(APP_SESION + h))
+        aviso = "  ← sesión en la BD sin reglas (ONOS se reinició): vuelve a iniciarla" if (f and n == 0) else ""
+        log(f"{h:4} {str(ip_host(h) or '-'):16} {n:>6}  "
+            + (f"{f[0]:>6} {f[1]:14} {f[2]:11} {f[4]}" if f else f"{'-':>6} {'(sin sesión)':14}") + aviso)
 
 def lote(pares, log=print):
     """Logins concurrentes: uno por hilo. La autenticación corre en paralelo; el DHCP comparte socket."""

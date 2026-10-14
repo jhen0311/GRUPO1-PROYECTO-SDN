@@ -41,7 +41,10 @@ def titulo(t):
     print(f"\n{B}{A}══ {t} ══{X}\n")
 
 def pausa():
-    input(f"\n{G}Enter para volver al menú…{X}")
+    try:
+        input(f"\n{G}Enter para volver al menú…{X}")
+    except (KeyboardInterrupt, EOFError):
+        print()
 
 def correr(cmd):
     """Ejecuta un comando del kit mostrando su salida en vivo."""
@@ -263,7 +266,7 @@ def main():
         sys.exit("Ejecuta como root (sudo -i).")
     acciones = {k: f for _, ops in MENU for k, _, f in ops}
     while True:
-        print("\033[2J\033[H", end="")
+        print("\n" + "─" * 66)   # sin limpiar la pantalla: lo anterior queda visible arriba
         t = "Seguridad de campus con SDN · Demo R1 y R2 · TEL354 G01"
         print(f"{B}{A}╔{'═' * (len(t) + 6)}╗\n║   {t}   ║\n╚{'═' * (len(t) + 6)}╝{X}")
         for grupo, ops in MENU:
@@ -271,7 +274,12 @@ def main():
             for k, d, _ in ops:
                 print(f"  {k:>2}. {d}")
         print(f"\n   0. Salir")
-        op = input(f"\n{B}Opción:{X} ").strip()
+        if L.contar_switch("core") < 10:
+            print(f"\n{R}⚠ Los switches no tienen las reglas proactivas: usa primero la opción 12.{X}")
+        try:
+            op = input(f"\n{B}Opción:{X} ").strip()
+        except (KeyboardInterrupt, EOFError):
+            print(); break
         if op == "0":
             break
         if op in acciones:
@@ -280,7 +288,11 @@ def main():
             except KeyboardInterrupt:
                 print("\n(cancelado)")
             except Exception as e:
-                print(f"\n{R}Error: {e}{X}")
+                msg = str(e).strip()
+                if "timeout expired" in msg or "could not connect" in msg:
+                    msg = ("no alcanzo PostgreSQL (10.200.0.12). ¿Están instaladas las reglas proactivas "
+                           "(opción 12) y la topología levantada?")
+                print(f"\n{R}Error: {msg}{X}")
             pausa()
 
 if __name__ == "__main__":

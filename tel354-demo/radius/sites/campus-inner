@@ -1,0 +1,44 @@
+# Túnel interno de EAP-TTLS: PAP verificado por bind LDAP y rol desde PostgreSQL.
+server campus-inner {
+	authorize {
+		filter_username
+		ldap
+		if ((ok || updated) && &User-Password) {
+			update control {
+				&Auth-Type := ldap
+			}
+		}
+		else {
+			reject
+		}
+	}
+
+	authenticate {
+		Auth-Type ldap {
+			ldap
+		}
+	}
+
+	post-auth {
+		# AVZ07, sección 3.3: estado, sanción, rol base e inscripciones (una sola consulta)
+		update request {
+			&Tmp-String-0 := "%{sql:SELECT campus_rol_efectivo('%{User-Name}')}"
+		}
+		if (&Tmp-String-0 =~ /^([A-Z]+)\|([0-9]+)\|([0-9]+)\|([0-9]+)$/) {
+			update outer.session-state {
+				&User-Name := &User-Name
+				&Filter-Id := "%{1}"
+				&PUCP-Role-Code := "%{expr:%{2} / 16}"
+				&Session-Timeout := "%{3}"
+				&PUCP-Max-Sessions := "%{4}"
+			}
+		}
+		else {
+			reject
+		}
+
+		Post-Auth-Type REJECT {
+			attr_filter.access_reject
+		}
+	}
+}

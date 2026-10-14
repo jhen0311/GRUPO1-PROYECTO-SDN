@@ -1,0 +1,3 @@
+minerva.mcgonagall:Minerva McGonagall:Lab2026-01!
+severus.snape:Severus Snape:Lab2026-02!
+albus.dumbledore:Albus Dumbledore:Lab2026-03!

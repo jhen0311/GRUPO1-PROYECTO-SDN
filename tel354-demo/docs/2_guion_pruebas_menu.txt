@@ -1,0 +1,171 @@
+=====================================================================
+ GUION DE PRUEBAS DEL VIDEO · TEL354 G01 · menu python3 demo.py
+=====================================================================
+ Todo se hace en la VENTANA 3 (menu), en este orden.
+ Las lineas "Extra (ventana 2)" son opcionales: comandos en mininet> para
+ mostrar las reglas directamente en el switch.
+ [Rubrica] = criterio de la rubrica que cubre cada paso.
+
+ Usuarios:  alumno.demo / Alumno2026!     docente.demo / Docente2026!
+            ti.demo / TI2026!             jp.demo / Jp2026!
+            sancion.demo / Sancion2026!   inactivo.demo / Inactivo2026!
+
+
+---------------------------------------------------------------------
+ PRUEBA 1 · Instalar reglas proactivas                      -> opcion 12
+---------------------------------------------------------------------
+ Esperado: core: 29 reglas · as1/as2: 28 reglas [T0: 5, T1: 21, T2: 2] · meters: 5
+ Decir: reglas fijas (no dependen de usuarios); 13 reglas 100 = 1 por permiso
+        rol->recurso con origen /12, leidas de la BD.
+ [Rubrica] Implementa rutas de trafico entre usuarios y servicios
+
+
+---------------------------------------------------------------------
+ PRUEBA 2 · Estado inicial                                  -> opcion 1
+---------------------------------------------------------------------
+ Esperado: ONOS 4/4 switches · Entradas: as1 30, as2 30, core 31 · hosts sin sesion
+ Decir: sin sesion nadie pasa; la tabla 0 solo deja EAPOL y ARP (reglas 900/800).
+
+
+---------------------------------------------------------------------
+ PRUEBA 3 · Bateria de autenticacion (R1)                   -> opcion 3
+---------------------------------------------------------------------
+ Esperado: Tasa de bloqueo 3/3 = 100 % · Rol correcto 5/5 = 100 %
+           jp.demo -> JP (doble rol) · sancion.demo -> CUARENTENA
+           cada REJECT tarda ~1 s (reject_delay anti fuerza bruta)
+ [Rubrica] Pudo autenticar usuario valido acorde a su rol
+
+
+---------------------------------------------------------------------
+ PRUEBA 4 · Login real de un alumno                         -> opcion 2
+---------------------------------------------------------------------
+ Host: 1 (h1) · Usuario: alumno.demo · Clave: Alumno2026!
+ Esperado: [1] 802.1X ACCEPT rol ALUMNO (k=1)
+           [2] DHCP opcion 82 (N=1, k=1) -> 10.17.0.x
+           [3] IP aplicada al host
+           [4] Reglas: 525, 520, 505 + 1 x 110 (TEL354) + 200, 190
+           [5] sesion.id en PostgreSQL · ACTIVA
+ [Rubrica] Interfaz de usuario para el control de acceso
+
+ Extra (ventana 2):
+sh ovs-ofctl -O OpenFlow13 --no-stats dump-flows as1 table=0
+ -> aparecen 525, 520 y 505 con la MAC 00:00:00:10:01:01 y la IP de h1
+
+
+---------------------------------------------------------------------
+ PRUEBA 5 · Login con clave incorrecta                      -> opcion 2
+---------------------------------------------------------------------
+ Host: 4 (h4) · Usuario: alumno.demo · Clave: hola123
+ Esperado: [1] 802.1X RECHAZADO · sin IP, sin reglas
+ Decir: sin autenticacion no hay DHCP ni reglas; su trafico muere en la regla 10.
+
+
+---------------------------------------------------------------------
+ PRUEBA 6 · Accesos del alumno (R2)                         -> opcion 8
+---------------------------------------------------------------------
+ Host: 1 (h1)
+ Esperado: permitir -> Campus Virtual :443, Biblioteca :443, Lab TEL354 :8181 (por curso)
+           bloquear -> el resto (SSH, BDs, Gestion, Nube TEL141)
+           Precision 12/12 = 100 % · Alcance 6/6 = 100 %
+ [Rubrica] Restringir recurso privilegiado al autorizado y al no autorizado
+ [Rubrica] Implementa recursos de red para el consumo de usuarios autorizados
+
+ Extra (ventana 2): solo las reglas que se usaron
+sh ovs-appctl bridge/dump-flows as1 | grep -v n_packets=0
+
+
+---------------------------------------------------------------------
+ PRUEBA 7 · Host sin sesion                                 -> opcion 8
+---------------------------------------------------------------------
+ Host: 4 (h4)
+ Esperado: todo "bloquear" 0/2 · Precision 100 %
+
+
+---------------------------------------------------------------------
+ PRUEBA 8 · Ver reglas del switch                           -> opcion 9
+---------------------------------------------------------------------
+ Switch: 1 (as1)
+ Esperado: reglas por tabla y prioridad; las de h1 marcadas "sesion h1"
+           (comparten los 16 bits altos de la cookie = su appId)
+ [Rubrica] Uso eficiente de las entradas TCAM
+
+
+---------------------------------------------------------------------
+ PRUEBA 9 · Logins concurrentes                             -> opcion 4
+---------------------------------------------------------------------
+ Esperado: h1 alumno, h2 docente y h3 ti admitidos a la vez
+           "Logins concurrentes: 3/3 admitidos en X ms (en serie ~Y ms)"  (X < Y)
+ [Rubrica] Escalabilidad: soporta logueos concurrentes
+
+
+---------------------------------------------------------------------
+ PRUEBA 10 · Carga sobre RADIUS                             -> opcion 5
+---------------------------------------------------------------------
+ Esperado: tabla con 1, 5 y 10 hilos; logins/s sube con los hilos;
+           las claves incorrectas (1 s) no frenan a los validos. Tarda ~1 min.
+ [Rubrica] Escalabilidad: soporta logueos concurrentes
+
+
+---------------------------------------------------------------------
+ PRUEBA 11 · TCAM medido vs modelo                          -> opcion 10
+---------------------------------------------------------------------
+ Esperado (con h1, h2 y h3 logueados):
+           as1 42/42 OK · as2 35/35 OK · core 31/31 OK
+ Decir: cada sesion suma 5 entradas + 1 por curso, solo en SU switch;
+        los permisos por rol no crecen con los usuarios.
+ [Rubrica] Uso eficiente de las entradas TCAM
+
+
+---------------------------------------------------------------------
+ PRUEBA 12 · Matriz de roles                                -> opcion 6
+---------------------------------------------------------------------
+ Esperado: tabla rol x recurso:  ✔ directo · ↑ heredado · cur = por curso · . sin acceso
+ [Rubrica] Implementa matriz de roles parametrizable
+
+
+---------------------------------------------------------------------
+ PRUEBA 13 · Cambio de politica en caliente                 -> opcion 7
+---------------------------------------------------------------------
+ Rol: ALUMNO · Recurso: BD academica
+ Esperado: "Agregado: ALUMNO -> BD academica"
+           "Reglas 100 en los switches de acceso: 26 -> 30"
+           (Alumno y JP la heredan; Docente ya la tenia)
+ Luego -> opcion 6 (aparece el ✔ nuevo) y opcion 8 con h1:
+           BD academica pasa a "permitir" y conecta 2/2
+ [Rubrica] Matriz de roles parametrizable
+
+ DESHACER al final (para dejar la demo como estaba):
+ opcion 7 -> ALUMNO -> BD academica (sale "[ya tiene permiso directo]") -> Quitado · 30 -> 26
+
+
+---------------------------------------------------------------------
+ PRUEBA 14 · (Opcional) Usuario sancionado                  -> opcion 2
+---------------------------------------------------------------------
+ Host: 4 (h4) · Usuario: sancion.demo · Clave: Sancion2026!
+ Esperado: rol CUARENTENA (k=7) · IP 10.114.x.x · VLAN 999 · sin reglas 110
+ Luego opcion 8 con h4: todo bloqueado (reglas 58: cuarentena no toca nada interno)
+
+
+---------------------------------------------------------------------
+ PRUEBA 15 · Logout y borrado inteligente                   -> opcion 11
+---------------------------------------------------------------------
+ Host: 1 (h1)
+ Esperado: "Reglas de la sesion: 6 -> 0 (borrado en bloque por su appId/cookie)"
+           "Entradas en as1: 42 -> 36"
+           "Otras sesiones intactas: h2 6->6, h3 5->5 ..."
+           h1 queda sin IP
+ [Rubrica] Borrado inteligente de reglas cuando el usuario se desloguea
+
+ Extra (ventana 2): la regla de entrega a h1 ya no esta
+sh ovs-ofctl -O OpenFlow13 --no-stats dump-flows as1 table=2
+
+
+---------------------------------------------------------------------
+ PRUEBA 16 · Estado final                                   -> opcion 1
+---------------------------------------------------------------------
+ Esperado: h1 sin sesion; h2 y h3 siguen con su sesion y sus reglas
+
+
+=====================================================================
+ Resumen de opciones:  12 · 1 · 3 · 2 · 2 · 8 · 8 · 9 · 4 · 5 · 10 · 6 · 7 · 6 · 8 · 7 · (2 · 8) · 11 · 1
+=====================================================================
