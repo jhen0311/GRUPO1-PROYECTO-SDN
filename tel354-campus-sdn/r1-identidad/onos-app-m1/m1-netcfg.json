@@ -1,0 +1,18 @@
+{
+  "apps": {
+    "tel354.m1": {
+      "m1": {
+        "nasIp": "172.16.0.10",
+        "radiusIp": "10.200.0.10",
+        "radiusPuerto": 1812,
+        "radiusSecreto": "tel354-secreto",
+        "relayIp": "172.16.0.10",
+        "keaIp": "10.200.0.13",
+        "jdbcUrl": "jdbc:postgresql://10.200.0.12:5432/campus?ssl=true&sslmode=verify-ca&sslrootcert=/etc/tel354/certs/ca.pem",
+        "jdbcUsuario": "onos_m1",
+        "jdbcClave": "m1-demo",
+        "rebotarPuertoAlExpirar": true
+      }
+    }
+  }
+}

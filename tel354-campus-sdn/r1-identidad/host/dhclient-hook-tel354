@@ -1,0 +1,9 @@
+# Hook de dhclient (se instala en /etc/dhcp/dhclient-enter-hooks.d/zz-tel354 con login.sh).
+# Los hosts de Mininet comparten el disco de la VM: si dhclient-script reescribiera
+# /etc/resolv.conf desde un host (h1-eth0, h2-eth0, ...), la VM perdería su DNS.
+# Solo afecta a las interfaces de los hosts de la topología.
+case "$interface" in
+  h[0-9]*-eth*)
+    make_resolv_conf() { :; }
+    ;;
+esac

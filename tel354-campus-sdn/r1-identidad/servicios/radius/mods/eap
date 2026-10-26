@@ -1,0 +1,32 @@
+# EAP-TTLS con PAP interno (decisión D8). Solo TTLS: el resto de métodos se deshabilita.
+eap {
+	default_eap_type = ttls
+	timer_expire = 60
+	ignore_unknown_eap_types = no
+	max_sessions = ${max_requests}
+
+	tls-config tls-common {
+		private_key_file = /etc/tel354/certs/radius.key
+		certificate_file = /etc/tel354/certs/radius.pem
+		ca_file = /etc/tel354/certs/ca.pem
+		dh_file = /etc/tel354/certs/dh
+		ca_path = ${cadir}
+		cipher_list = "DEFAULT"
+		tls_min_version = "1.2"
+		tls_max_version = "1.2"
+		ecdh_curve = ""
+		cache {
+			enable = no
+		}
+		ocsp {
+			enable = no
+		}
+	}
+
+	ttls {
+		tls = tls-common
+		default_eap_type = md5
+		copy_request_to_tunnel = no
+		virtual_server = "campus-inner"
+	}
+}
