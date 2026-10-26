@@ -1,0 +1,7 @@
+# Diccionario propio de la demo (AVZ07, Tabla 7: VSA con código de rol y límite de sesiones)
+# 99999 es un número de empresa provisional para la maqueta; en producción se usa el PEN de la PUCP.
+VENDOR		PUCP				99999
+BEGIN-VENDOR	PUCP
+ATTRIBUTE	PUCP-Role-Code			1	integer
+ATTRIBUTE	PUCP-Max-Sessions		2	integer
+END-VENDOR	PUCP

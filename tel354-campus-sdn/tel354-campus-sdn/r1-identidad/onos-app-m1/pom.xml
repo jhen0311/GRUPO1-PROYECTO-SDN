@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  M1 - Identidad y sesiones (R1) · TEL354 Grupo 01
+  App OSGi para ONOS 1.13.0, basada en el arquetipo onos-bundle-archetype:1.13.0.
+  Compilar en la Mininet-VM:   mvn clean install
+  Instalar:                    onos-app localhost install! target/tel354-m1-1.0.0.oar
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>pe.edu.pucp.tel354</groupId>
+    <artifactId>tel354-m1</artifactId>
+    <version>1.0.0</version>
+    <packaging>bundle</packaging>
+
+    <description>M1: autenticador 802.1X de paso, sesiones, relay DHCP y proxy ARP del gateway</description>
+    <url>https://www.pucp.edu.pe</url>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <onos.version>1.13.0</onos.version>
+        <onos.app.name>tel354.m1</onos.app.name>
+        <onos.app.title>TEL354 M1 - Identidad y sesiones</onos.app.title>
+        <onos.app.origin>PUCP TEL354 Grupo 01</onos.app.origin>
+        <onos.app.category>Security</onos.app.category>
+        <onos.app.url>https://www.pucp.edu.pe</onos.app.url>
+        <onos.app.readme>R1: 802.1X (EAP-TTLS de paso hacia FreeRADIUS), sesiones en PostgreSQL,
+            relay DHCP con opción 82 hacia Kea y proxy ARP del gateway virtual.</onos.app.readme>
+        <onos.app.requires>org.onosproject.openflow</onos.app.requires>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onos-api</artifactId>
+            <version>${onos.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onlab-osgi</artifactId>
+            <version>${onos.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onlab-misc</artifactId>
+            <version>${onos.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>org.apache.felix.scr.annotations</artifactId>
+            <version>1.9.12</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Driver JDBC embebido en el bundle (Java 8) -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.2.27</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <version>3.3.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Export-Package/>
+                        <Private-Package>pe.edu.pucp.tel354.m1.*</Private-Package>
+                        <Embed-Dependency>postgresql;scope=compile|runtime;inline=false</Embed-Dependency>
+                        <Embed-Transitive>false</Embed-Transitive>
+                        <!-- El driver referencia paquetes opcionales (JNA, waffle, JNDI, OSGi JDBC)
+                             que no se usan aquí: no deben impedir que el bundle se resuelva.
+                             Los de ONOS y slf4j siguen siendo obligatorios. -->
+                        <Import-Package>!org.checkerframework.*,com.sun.jna*;resolution:=optional,waffle*;resolution:=optional,org.osgi.service.jdbc*;resolution:=optional,javax.naming*;resolution:=optional,*</Import-Package>
+                    </instructions>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.7.0</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-scr-plugin</artifactId>
+                <version>1.24.0</version>
+                <executions>
+                    <execution>
+                        <id>generate-scr-srcdescriptor</id>
+                        <goals>
+                            <goal>scr</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <supportedProjectTypes>
+                        <supportedProjectType>bundle</supportedProjectType>
+                    </supportedProjectTypes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.onosproject</groupId>
+                <artifactId>onos-maven-plugin</artifactId>
+                <version>1.11</version>
+                <executions>
+                    <execution>
+                        <id>cfg</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>cfg</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>app</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>app</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
