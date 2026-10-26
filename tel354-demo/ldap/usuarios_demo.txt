@@ -1,7 +1,0 @@
-# uid:nombre:contraseña   (identidad interna del túnel EAP-TTLS)
-alumno.demo:Alumno de prueba:Alumno2026!
-docente.demo:Docente de prueba:Docente2026!
-ti.demo:Analista de TI de prueba:TI2026!
-jp.demo:Alumno con inscripcion JP:Jp2026!
-inactivo.demo:Cuenta inactiva:Inactivo2026!
-sancion.demo:Usuario sancionado:Sancion2026!
