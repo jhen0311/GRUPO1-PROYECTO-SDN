@@ -735,7 +735,7 @@ public class M5Manager implements IncidentService, IncidentAdminService, Mitigat
         for (List<FlowRule> l : iv.reglas.values()) {
             for (FlowRule r : l) {
                 if (Cookies.indice(r.id().value()) % 4 == Cookies.IDX_301_USUARIOS) {
-                    m3.vigilar(r.id(), r.deviceId());
+                    m3.vigilar(r.deviceId(), r.id().value());
                 }
             }
         }
@@ -749,7 +749,7 @@ public class M5Manager implements IncidentService, IncidentAdminService, Mitigat
         for (List<FlowRule> l : iv.reglas.values()) {
             for (FlowRule r : l) {
                 if (Cookies.indice(r.id().value()) % 4 == Cookies.IDX_301_USUARIOS) {
-                    m3.dejarDeVigilar(r.id());
+                    m3.dejarDeVigilar(r.deviceId(), r.id().value());
                 }
             }
         }
@@ -801,7 +801,7 @@ public class M5Manager implements IncidentService, IncidentAdminService, Mitigat
         CounterService m3 = counterService;
         if (m3 != null) {
             for (FlowRule r : l) {
-                m3.dejarDeVigilar(r.id());
+                m3.dejarDeVigilar(r.deviceId(), r.id().value());
             }
         }
         flowRuleService.removeFlowRules(l.toArray(new FlowRule[0]));
@@ -880,7 +880,7 @@ public class M5Manager implements IncidentService, IncidentAdminService, Mitigat
     }
 
     private void alContador(CounterEvent e) {
-        long c = e.subject().value();
+        long c = e.cookie();
         if (!Cookies.es(c, appId, Cookies.CONTENCION) || Cookies.indice(c) % 4 != Cookies.IDX_301_USUARIOS) {
             return;
         }

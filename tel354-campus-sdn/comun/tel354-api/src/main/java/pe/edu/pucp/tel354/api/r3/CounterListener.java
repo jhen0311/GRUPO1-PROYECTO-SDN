@@ -1,6 +1,14 @@
 package pe.edu.pucp.tel354.api.r3;
 
-import org.onosproject.event.EventListener;
+/**
+ * Contrato de quien quiere recibir los avisos CounterDelta de M3 (por ejemplo, M5).
+ */
+public interface CounterListener {
 
-public interface CounterListener extends EventListener<CounterEvent> {
+    /**
+     * Se ejecuta cada vez que una regla vigilada sumó paquetes.
+     *
+     * @param evento aviso con el switch, la regla y lo que sumó
+     */
+    void event(CounterEvent evento);
 }
