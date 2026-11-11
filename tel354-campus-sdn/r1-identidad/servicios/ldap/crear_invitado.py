@@ -19,7 +19,7 @@ BASE = "dc=campus,dc=pucp,dc=edu,dc=pe"
 
 def env():
     v = {}
-    for linea in open(os.path.join(RAIZ, "comun", "config", "demo.env"), encoding="utf-8"):
+    for linea in open(os.path.join(RAIZ, "comun", "config", os.environ.get("TEL354_ENV", "slice.env")), encoding="utf-8"):
         linea = linea.split("#")[0].strip()
         if "=" in linea:
             k, x = linea.split("=", 1); v[k.strip()] = x.strip()

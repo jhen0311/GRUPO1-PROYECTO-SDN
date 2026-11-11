@@ -1,13 +1,16 @@
 package pe.edu.pucp.tel354.m1.nucleo;
 
 /**
- * Parámetros de M1 (AVZ07, Tabla 2). Los valores por defecto son los del diseño;
+ * Parámetros de M1 (AVZ07, Tabla 2; LAB6, Tabla 2). Los valores por defecto son los del slice;
  * en ONOS se sobrescriben con la network config de la app (m1-netcfg.json).
  */
 public class Parametros {
-    /** Dirección de ONOS en el plano de control: NAS-IP de RADIUS y origen de los mensajes. */
-    public String nasIp = "172.16.0.10";
-    public String radiusIp = "10.200.0.10";
+    /**
+     * Dirección in-band de esta instancia de ONOS: NAS-IP de RADIUS, giaddr del relay DHCP y
+     * origen de ambos sockets. En el clúster la resuelve M1Manager con nasIpPorNodo.
+     */
+    public String nasIp = "172.16.0.11";
+    public String radiusIp = "10.200.3.10";
     public int radiusPuerto = 1812;
     public String radiusSecreto = "tel354-secreto";
     /** Segundos sin respuesta antes de retransmitir un Access-Request, y número de reintentos. */
@@ -16,12 +19,14 @@ public class Parametros {
     /** MTU que se anuncia a FreeRADIUS (Framed-MTU): limita el tamaño de los fragmentos TLS. */
     public int framedMtu = 1400;
 
-    /** Relay DHCP: giaddr y origen de los mensajes hacia Kea (puerto 67). */
-    public String relayIp = "172.16.0.10";
+    /** Relay DHCP: giaddr y origen de los mensajes hacia Kea (puerto 67). Igual a nasIp. */
+    public String relayIp = "172.16.0.11";
     public String keaIp = "10.200.0.13";
+    /** Control Agent de Kea (lease4-del en el paso a cuarentena). */
+    public String keaCtrlUrl = "http://10.200.0.13:8000/";
 
-    /** PostgreSQL (usuario onos_m1). TLS con la CA de la demo (verify-ca). */
-    public String jdbcUrl = "jdbc:postgresql://10.200.0.12:5432/campus"
+    /** PostgreSQL (usuario onos_m1). TLS con la CA del campus (verify-ca). */
+    public String jdbcUrl = "jdbc:postgresql://10.200.3.12:5432/campus"
             + "?ssl=true&sslmode=verify-ca&sslrootcert=/etc/tel354/certs/ca.pem";
     public String jdbcUsuario = "onos_m1";
     public String jdbcClave = "m1-demo";
@@ -31,4 +36,13 @@ public class Parametros {
 
     /** Rebotar el puerto del host cuando su sesión expira (fuerza la reautenticación). */
     public boolean rebotarPuertoAlExpirar = true;
+
+    /** Temporizadores de la máquina de estados (AVZ07, Tabla 20; LLSD R3, sección 5.2). */
+    public int autenticandoSeg = 30;
+    public int sinDhcpSeg = 60;
+    /** t_down del rebote del puerto. */
+    public int rebotePuertoSeg = 5;
+    /** EAP-Request/Identity tras el rebote (P8): intervalo e intentos. */
+    public int eapIdentidadIntervaloSeg = 30;
+    public int eapIdentidadIntentos = 3;
 }

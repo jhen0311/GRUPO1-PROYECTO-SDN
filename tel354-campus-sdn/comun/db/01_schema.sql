@@ -103,7 +103,8 @@ CREATE TABLE sesion (
     inicio          TIMESTAMPTZ NOT NULL DEFAULT now(),
     fin             TIMESTAMPTZ,
     motivo_cierre   VARCHAR(16) CHECK (motivo_cierre IN
-                    ('DESCONEXION','EXPIRACION','REVOCACION','MOVILIDAD','LIMITE_SESIONES','CUARENTENA'))
+                    ('DESCONEXION','EXPIRACION','REVOCACION','MOVILIDAD','LIMITE_SESIONES','CUARENTENA',
+                     'TABLA_LLENA','REINICIO'))   -- M1 v2 (ONOS 2.7, clúster)
 );
 CREATE INDEX sesion_activa_idx ON sesion (usuario_id) WHERE estado <> 'CERRADA';
 
@@ -121,6 +122,9 @@ CREATE TABLE incidente (
     mitigado_en  TIMESTAMPTZ,
     expira_en    TIMESTAMPTZ
 );
+
+-- Reincidencia de M5: incidentes de una sesión por fecha (LLSD R3, sección 6.2)
+CREATE INDEX incidente_sesion_ts_idx ON incidente (sesion_id, detectado_en);
 
 CREATE TABLE cuarentena (
     id           BIGSERIAL PRIMARY KEY,
@@ -149,6 +153,7 @@ CREATE TABLE auth_log (
 CREATE VIEW v_incidente_estado AS
 SELECT i.*,
        CASE WHEN EXISTS (SELECT 1 FROM cuarentena c WHERE c.incidente_id = i.id) THEN 'CONFIRMADO'
+            WHEN i.mitigado_en IS NOT NULL AND i.evidencia->>'cierre' = 'VENCIMIENTO' THEN 'VENCIDO'
             WHEN i.mitigado_en IS NOT NULL THEN 'DESCARTADO'
             ELSE 'EN_INVESTIGACION' END AS estado
 FROM incidente i;

@@ -1,11 +1,14 @@
 package pe.edu.pucp.tel354.m1.nucleo;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.function.LongConsumer;
 
 /**
  * Lo que el núcleo de M1 necesita del controlador. En ONOS lo implementan PacketService
- * (Packet-Out), FlowRuleService (reglas) y DeviceAdminService (rebote del puerto);
- * en el banco de pruebas, un emulador del switch.
+ * (Packet-Out), FlowRuleService (reglas), MeterService/FlowRuleService (meter ctl_P) y
+ * DeviceAdminService (rebote del puerto); en el banco de pruebas, un emulador del switch.
  */
 public interface Plataforma {
 
@@ -13,9 +16,10 @@ public interface Plataforma {
     void enviarTrama(String dpid, int puerto, byte[] trama);
 
     /**
-     * Reglas 525 y 505 de la Tabla 0 (fase 2). Devuelve los objetos instalados.
-     * Las reglas de {@code retirarAntes} se retiran en una etapa previa: si una regla nueva es
-     * igual a una vieja (mismo puerto y MAC), el borrado no puede alcanzar a la nueva.
+     * Reglas 525 y 505 de la Tabla 0 (fase 2), con el meter ctl_P del puerto. Devuelve los
+     * objetos instalados. Las reglas de {@code retirarAntes} se retiran en una etapa previa:
+     * si una regla nueva es igual a una vieja (mismo puerto y MAC), el borrado no puede
+     * alcanzar a la nueva.
      */
     List<Object> instalarAutenticacion(Sesion s, List<Object> retirarAntes);
 
@@ -25,8 +29,24 @@ public interface Plataforma {
     /** Retira reglas instaladas antes (borrado en bloque de la sesión). */
     void retirar(List<Object> reglas);
 
-    /** Baja y sube el puerto: el supplicant detecta el enlace y vuelve a autenticarse. */
-    void rebotarPuerto(String dpid, int puerto);
+    /**
+     * Baja el puerto, lo sube a los {@code segundosAbajo} y luego ejecuta {@code alSubir}
+     * (EAP-Request/Identity). No bloquea al llamador.
+     */
+    void rebotarPuerto(String dpid, int puerto, int segundosAbajo, Runnable alSubir);
+
+    /** Rebote síncrono de varios puertos ("dpid/puerto"); se usa al desactivar M1. */
+    default void rebotarAhora(List<String> puertos, int segundosAbajo) {
+    }
+
+    /** Aviso del switch: rechazó las reglas de la sesión (p. ej., tabla llena). */
+    default void alFallarInstalacion(LongConsumer sesionId) {
+    }
+
+    /** Reglas de sesión de M1 presentes en el switch, agrupadas por sesion.id. */
+    default Map<Long, List<ReglaRecuperada>> recuperar(String dpid) {
+        return Collections.emptyMap();
+    }
 
     /** Servidor de un curso en el que el usuario está inscrito (vista v_acceso_curso). */
     final class AccesoCurso {

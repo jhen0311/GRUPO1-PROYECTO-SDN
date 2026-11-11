@@ -53,6 +53,7 @@ public class Autenticador {
     private final Parametros p;
     private final Plataforma plataforma;
     private final GestorSesiones gestor;
+    private final Notificador aviso;
     private final SecureRandom azar = new SecureRandom();
 
     private final Map<String, Conversacion> porClave = new ConcurrentHashMap<>();
@@ -65,10 +66,29 @@ public class Autenticador {
     private InetSocketAddress servidor;
     private MacAddress macPropia;
 
-    public Autenticador(Parametros p, Plataforma plataforma, GestorSesiones gestor) {
+    /** Puertos rebotados que esperan respuesta al EAP-Request/Identity (P8): "dpid/puerto". */
+    private static final class Reautenticacion {
+        final String dpid;
+        final int puerto;
+        int enviados;
+        long ultimoMs;
+
+        Reautenticacion(String dpid, int puerto) {
+            this.dpid = dpid;
+            this.puerto = puerto;
+        }
+    }
+
+    /** Dirección de grupo de la PAE (IEEE 802.1X): el supplicant la escucha aunque se crea autenticado. */
+    private static final MacAddress PAE = MacAddress.valueOf("01:80:c2:00:00:03");
+
+    private final Map<String, Reautenticacion> reautenticaciones = new ConcurrentHashMap<>();
+
+    public Autenticador(Parametros p, Plataforma plataforma, GestorSesiones gestor, Notificador aviso) {
         this.p = p;
         this.plataforma = plataforma;
         this.gestor = gestor;
+        this.aviso = aviso;
     }
 
     public void iniciar() throws SocketException {
@@ -112,6 +132,7 @@ public class Autenticador {
         EAPOL eapol = (EAPOL) eth.getPayload();
         MacAddress mac = eth.getSourceMAC();
         String clave = Sesion.clave(dpid, puerto, mac.toString());
+        reautenticaciones.remove(dpid + "/" + puerto);       // el host respondió: fin de P8
         switch (eapol.getEapolType()) {
             case EAPOL.EAPOL_START:
                 Conversacion c = new Conversacion();
@@ -235,9 +256,22 @@ public class Autenticador {
             c.enviadoMs = ahora;
             enviarUdp(c.ultimo);                  // misma solicitud: mismo Id y autenticador
         }
-        // conversaciones abandonadas (más de 2 minutos sin terminar)
-        porClave.values().removeIf(c -> c.radiusId < 0 && ahora - c.inicioMs > 120_000
+        // estado AUTENTICANDO: conversaciones que no terminan en autenticandoSeg (30 s) se abandonan
+        porClave.values().removeIf(c -> c.radiusId < 0 && ahora - c.inicioMs > p.autenticandoSeg * 1000L
                 && gestor.buscar(c.dpid, c.puerto, c.mac.toString()) == null);
+        // P8: EAP-Request/Identity cada 30 s, hasta 3 veces, mientras el host no responda
+        for (Reautenticacion r : reautenticaciones.values()) {
+            if (ahora - r.ultimoMs < p.eapIdentidadIntervaloSeg * 1000L) {
+                continue;
+            }
+            if (r.enviados >= p.eapIdentidadIntentos) {
+                reautenticaciones.remove(r.dpid + "/" + r.puerto);
+                log.info("M1: {}/{} no respondió a {} EAP-Request/Identity; el puerto queda sin sesión",
+                         r.dpid, r.puerto, r.enviados);
+                continue;
+            }
+            enviarIdentidad(r, ahora);
+        }
     }
 
     // -------------------------------------------------------------- RADIUS -> M1
@@ -304,6 +338,7 @@ public class Autenticador {
                 break;
             case RADIUS.RADIUS_CODE_ACCESS_REJECT:
                 log.info("M1: Access-Reject para {} en {}/{}", c.mac, c.dpid, c.puerto);
+                aviso.autenticacionFallida(c.dpid, c.puerto, c.mac.toString(), texto(c.identidad));
                 porClave.remove(Sesion.clave(c.dpid, c.puerto, c.mac.toString()));
                 enviarEap(c, eap != null ? eap : new EAP(EAP.FAILURE, (byte) 0, (byte) 0, null));
                 break;
@@ -330,6 +365,7 @@ public class Autenticador {
         Sesion s = (usuario.isEmpty() || rol.isEmpty()) ? null
                 : gestor.abrir(c.dpid, c.puerto, c.mac.toString(), usuario, rol, timeout, maxSes);
         if (s == null) {
+            aviso.autenticacionFallida(c.dpid, c.puerto, c.mac.toString(), usuario);
             byte eid = eapExito != null ? eapExito.getIdentifier() : 0;
             enviarEap(c, new EAP(EAP.FAILURE, eid, (byte) 0, null));
             return;
@@ -338,6 +374,27 @@ public class Autenticador {
     }
 
     // ---------------------------------------------------------------- M1 -> host
+
+    /**
+     * P8: al rehabilitar un puerto rebotado, M1 inicia 802.1X con un EAP-Request/Identity hacia la
+     * dirección de grupo de la PAE (autenticación iniciada por el autenticador, IEEE 802.1X).
+     */
+    public void solicitarIdentidad(String dpid, Integer puerto) {
+        Reautenticacion r = new Reautenticacion(dpid, puerto);
+        reautenticaciones.put(dpid + "/" + puerto, r);
+        enviarIdentidad(r, System.currentTimeMillis());
+    }
+
+    private void enviarIdentidad(Reautenticacion r, long ahora) {
+        r.enviados++;
+        r.ultimoMs = ahora;
+        Conversacion c = new Conversacion();
+        c.dpid = r.dpid;
+        c.puerto = r.puerto;
+        c.mac = PAE;
+        enviarEap(c, new EAP(EAP.REQUEST, (byte) azar.nextInt(256), EAP.ATTR_IDENTITY, null));
+        log.info("M1: EAP-Request/Identity {} de {} hacia {}/{}", r.enviados, p.eapIdentidadIntentos, r.dpid, r.puerto);
+    }
 
     private void enviarEap(Conversacion c, EAP eap) {
         EAPOL eapol = new EAPOL();

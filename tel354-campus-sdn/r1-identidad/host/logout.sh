@@ -11,6 +11,9 @@ SILENCIO=0; [[ " $* " == *" --silencioso "* ]] && SILENCIO=1
 RUN=/run/tel354
 CTRL=$RUN/wpa-ctrl
 
+if [ -f "$RUN/wpa-cli-$IF.pid" ]; then                  # acción de P8 (login.sh)
+  kill "$(cat "$RUN/wpa-cli-$IF.pid")" 2>/dev/null; rm -f "$RUN/wpa-cli-$IF.pid"
+fi
 if [ -f "/run/dhclient-$IF.pid" ]; then
   timeout 5 dhclient -r -lf "/run/dhclient-$IF.leases" -pf "/run/dhclient-$IF.pid" "$IF" >/dev/null 2>&1
   rm -f "/run/dhclient-$IF.pid"

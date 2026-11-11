@@ -12,6 +12,7 @@
 #      opción 82 y Kea asigna una IP del pool del rol y del pabellón.
 #
 # Uso, dentro del host (ver entrar.sh):   bash r1-identidad/host/login.sh [interfaz]
+# En las VM del slice (Ubuntu-1, Kali-1, ...) se indica la interfaz de datos: login.sh ens4
 # =====================================================================
 set -u
 AQUI="$(cd "$(dirname "$0")" && pwd)"
@@ -79,6 +80,12 @@ case "$ESTADO" in
            bash "$AQUI/logout.sh" "$IF" --silencioso; exit 3 ;;
 esac
 
+# Prueba del cierre por «60 s sin DHCP» (M1): SIN_DHCP=1 bash login.sh ens4
+if [ "${SIN_DHCP:-0}" = "1" ]; then
+  echo "SIN_DHCP=1: no se pide IP; M1 cerrará la sesión a los 60 s (DESCONEXION)."
+  exit 0
+fi
+
 # dhclient con archivos propios de la interfaz (los hosts de Mininet comparten el disco de la VM).
 # Rutas permitidas por el perfil AppArmor de dhclient; el hook evita que toque /etc/resolv.conf.
 HOOK=/etc/dhcp/dhclient-enter-hooks.d/zz-tel354
@@ -89,6 +96,16 @@ if timeout 30 dhclient -1 -lf "/run/dhclient-$IF.leases" -pf "/run/dhclient-$IF.
 else
   echo "sin respuesta del servidor DHCP"; exit 4
 fi
+# Si el equipo ya tiene otra ruta por defecto (p. ej., la de gestión en las VM del laboratorio),
+# dhclient no puede instalar la suya: la intranet (10.0.0.0/8) se alcanza por el gateway del rol.
+GW=$(awk '/option routers/ {gsub(";",""); g=$3} END {print g}' "/run/dhclient-$IF.leases" 2>/dev/null)
+if [ -n "$GW" ] && ! ip -4 route show default | grep -q "dev $IF"; then
+  ip route replace 10.0.0.0/8 via "$GW" dev "$IF"
+fi
+
+# P8: si M1 rebota el puerto y vuelve a pedir la identidad (p. ej., paso a Cuarentena), wpa_cli
+# ejecuta wpa_accion.sh al completarse 802.1X y el host renueva su IP sin intervención.
+wpa_cli -p "$CTRL" -i "$IF" -a "$AQUI/wpa_accion.sh" -B -P "$RUN/wpa-cli-$IF.pid" >/dev/null 2>&1
 echo
 ip -br -4 addr show dev "$IF"
 ip -4 route show default

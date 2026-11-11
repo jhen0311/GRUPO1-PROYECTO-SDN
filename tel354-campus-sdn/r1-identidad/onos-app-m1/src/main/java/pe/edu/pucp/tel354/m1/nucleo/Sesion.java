@@ -21,11 +21,17 @@ public class Sesion {
     public int octeto;            // b = 16·k
     public int pabellon;          // N
     public int vlan;              // 100 + N, o 999 en cuarentena
-    public int timeoutSeg;        // Session-Timeout
+    public int timeoutSeg;        // Session-Timeout (o lo que quedaba al recuperarla)
     public long inicioMs = System.currentTimeMillis();
     public int dispositivoId;
     public String ip;             // null hasta el DHCPACK
     public Estado estado = Estado.AUTENTICADA;
+
+    /** Ya se registró en el log su primer DHCPDISCOVER (medición de la fase 3). */
+    public boolean discoverVisto;
+    /** Última BindingViolation publicada (una por segundo como máximo). */
+    public long ultimaViolacionMs;
+    public String ultimaIpViolacion;
 
     /** Reglas instaladas (objetos del programador: FlowRule en ONOS). */
     public final List<Object> reglasAutenticacion = new ArrayList<>();

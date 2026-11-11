@@ -3,11 +3,11 @@
 export_matriz.py - Exporta la matriz de autorización a JSON para la batería de R2.
 Los hosts de usuario no pueden consultar la BD (R2 lo impide), así que la batería lee
 este archivo, que se genera desde el namespace raíz.
-Uso: python3 r2-autorizacion/tests/export_matriz.py > /tmp/matriz.json
+Uso (en el Controlador del piloto): python3 r2-autorizacion/tests/export_matriz.py > /tmp/matriz.json
 """
 import json, sys
 import psycopg2
-dsn = sys.argv[1] if len(sys.argv) > 1 else "host=10.200.0.12 dbname=campus user=onos_m2 password=m2-demo"
+dsn = sys.argv[1] if len(sys.argv) > 1 else "host=10.200.3.12 dbname=campus user=onos_m2 password=m2-demo sslmode=require"
 with psycopg2.connect(dsn) as cx, cx.cursor() as cur:
     cur.execute("SELECT id, nombre, host(ip), protocolo, puerto FROM recurso ORDER BY id")
     recursos = [dict(zip(("id", "nombre", "ip", "protocolo", "puerto"), r)) for r in cur.fetchall()]

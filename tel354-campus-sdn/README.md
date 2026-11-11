@@ -1,5 +1,9 @@
 # Red de campus SDN con enfoque Zero Trust · TEL354 Grupo 01
 
+> **Versión 2.0 (piloto del LAB6).** ONOS 2.7.0 en un clúster de 3 instancias (Docker), cuatro Open vSwitch con control in-band y las direcciones del LAB6 (`comun/config/slice.env`). Guías: configuración de M1, configuración y prueba de M5 y guía completa de R3 (documentos Word del grupo). La maqueta de Mininet con ONOS 1.13 sigue documentada abajo y usa `comun/config/demo.env` (`TEL354_ENV=demo.env` en los scripts de servicios).
+>
+> Novedades: `comun/tel354-api` (servicios y eventos de R1-R3), `comun/cluster` (Atomix + ONOS), `comun/topo/slice` (OVS in-band y red de servidores), M1 2.0 (clúster y v1.1 completa), `r2-autorizacion/proactivo/base_slice.py`, M5 (`r3-ataques-encubiertos/onos-app-m5`) y plantillas de M2, M3 y M4a.
+
 Prototipo de la solución de campus de TEL354 (PUCP, 2026-2): ONOS 1.13 como controlador, Open vSwitch con OpenFlow 1.3 como plano de datos y los servicios de identidad (FreeRADIUS, OpenLDAP, PostgreSQL y Kea). Ningún equipo tiene acceso a la red hasta autenticarse con 802.1X, y su acceso queda limitado a lo que permite su rol y sus cursos.
 
 El código está organizado por requerimiento. Los módulos son apps de ONOS que usan solo los servicios nativos del controlador (PacketService, FlowRuleService, DeviceAdminService y NetworkConfig); no se modifica el código de ONOS.

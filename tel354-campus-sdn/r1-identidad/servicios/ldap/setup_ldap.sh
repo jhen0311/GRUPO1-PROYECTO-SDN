@@ -3,11 +3,14 @@
 # OpenLDAP de la demo: dominio campus.pucp.edu.pe, usuarios con
 # SHA-512 crypt, ACL que impide leer userPassword y LDAPS con la CA
 # de la demo (AVZ07, sección 3.1).
-# Uso: bash r1-identidad/servicios/ldap/setup_ldap.sh   (requiere scripts/gen_certs.sh antes)
+# Uso (slice, S-IDENTIDAD): bash r1-identidad/servicios/ldap/setup_ldap.sh
+# Uso (maqueta):            TEL354_ENV=demo.env bash r1-identidad/servicios/ldap/setup_ldap.sh
+# (requiere scripts/gen_certs.sh antes)
 # =====================================================================
 set -euo pipefail
 cd "$(dirname "$0")"
-source ../../../comun/config/demo.env
+ENVF=${TEL354_ENV:-slice.env}
+source ../../../comun/config/$ENVF
 
 BASE="dc=campus,dc=pucp,dc=edu,dc=pe"
 CERTS=/etc/tel354/certs
@@ -105,7 +108,7 @@ sn: ${uid}
 userPassword: {CRYPT}$(hash "${pw}")
 
 EOF
-done < usuarios_demo.txt
+done < <(cat usuarios_demo.txt usuarios_piloto.txt 2>/dev/null)   # piloto: comun/db/gen_usuarios.py
 } | ldapadd -x -H ldapi:/// -D "cn=admin,${BASE}" -w "${LDAP_ADMIN_PW}" -c >/dev/null 2>&1 || \
   echo "Aviso: algunas entradas ya existían (se mantienen)."
 
@@ -117,4 +120,11 @@ echo "Usuarios cargados:"
 ldapsearch -LLL -x -H ldapi:/// -D "cn=admin,${BASE}" -w "${LDAP_ADMIN_PW}" -b "ou=usuarios,${BASE}" uid | grep '^uid:'
 
 pkill -x slapd; sleep 1
-echo "OpenLDAP configurado. Se arranca en el host svc con scripts/servicios/start_services.sh."
+if [ "$ENVF" != "demo.env" ]; then
+  # Slice: slapd como servicio, solo por LDAPS en su IP y por ldapi local
+  sed -i "s#^SLAPD_SERVICES=.*#SLAPD_SERVICES=\"ldapi:/// ldaps://${IP_LDAP}/\"#" /etc/default/slapd
+  systemctl enable slapd >/dev/null 2>&1 || true
+  systemctl restart slapd && echo "OpenLDAP en marcha (ldaps://${IP_LDAP})."
+else
+  echo "OpenLDAP configurado. Se arranca en el host svc con scripts/servicios/start_services.sh."
+fi

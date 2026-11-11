@@ -1,0 +1,45 @@
+{
+  "_comentario": "Puertos OpenFlow del piloto (LAB6, Tabla 3). ovs_switch.sh fija cada número con ofport_request; la columna nic es la interfaz Linux de la VM del switch y se ajusta con 'ip -br link'. Las MAC de los servidores se llenan con la de su interfaz de datos.",
+  "switches": {
+    "SW-A1": {"dpid": "of:0000000000000001", "ip": "172.16.0.23", "pabellon": 1,
+              "puertos": {"1": {"nic": "ens4", "hacia": "SW-C1", "enlace": "E1"},
+                          "2": {"nic": "ens5", "hacia": "Ubuntu-1", "enlace": "E13"},
+                          "3": {"nic": "ens6", "hacia": "Kali-1", "enlace": "E14"}}},
+    "SW-A2": {"dpid": "of:0000000000000002", "ip": "172.16.0.24", "pabellon": 2,
+              "puertos": {"1": {"nic": "ens4", "hacia": "SW-C2", "enlace": "E2"},
+                          "2": {"nic": "ens5", "hacia": "Ubuntu-2", "enlace": "E15"},
+                          "3": {"nic": "ens6", "hacia": "Kali-2", "enlace": "E16"}}},
+    "SW-C1": {"dpid": "of:00000000000000c1", "ip": "172.16.0.21",
+              "puertos": {"1": {"nic": "ens4", "hacia": "SW-A1", "enlace": "E1"},
+                          "2": {"nic": "ens5", "hacia": "SW-C2", "enlace": "E3"},
+                          "3": {"nic": "ens6", "hacia": "Controlador", "enlace": "E4"},
+                          "4": {"nic": "ens7", "hacia": "Internet", "enlace": "E6"},
+                          "5": {"nic": "ens8", "hacia": "IDS-Suricata", "enlace": "E17"}}},
+    "SW-C2": {"dpid": "of:00000000000000c2", "ip": "172.16.0.22",
+              "puertos": {"1": {"nic": "ens4", "hacia": "SW-A2", "enlace": "E2"},
+                          "2": {"nic": "ens5", "hacia": "SW-C1", "enlace": "E3"},
+                          "3": {"nic": "ens6", "hacia": "Controlador", "enlace": "E5"},
+                          "4": {"nic": "ens7", "hacia": "S-SERVICIOS", "enlace": "E7"},
+                          "5": {"nic": "ens8", "hacia": "S-IDENTIDAD", "enlace": "E8"},
+                          "6": {"nic": "ens9", "hacia": "S-RECURSOS", "enlace": "E9"},
+                          "7": {"nic": "ens10", "hacia": "S-CURSOS", "enlace": "E10"},
+                          "8": {"nic": "ens11", "hacia": "IDS-Suricata", "enlace": "E11"},
+                          "9": {"nic": "ens12", "hacia": "IDS-Suricata", "enlace": "E12"}}}
+  },
+  "servidores": {
+    "S-SERVICIOS":  {"puerto_sw_c2": 4, "mac": "RELLENAR", "ips": ["10.200.0.5", "10.200.0.13", "10.200.0.14"]},
+    "S-IDENTIDAD":  {"puerto_sw_c2": 5, "mac": "RELLENAR", "ips": ["10.200.3.10", "10.200.3.11", "10.200.3.12"]},
+    "S-RECURSOS":   {"puerto_sw_c2": 6, "mac": "RELLENAR", "ips": ["10.200.1.10", "10.200.1.20", "10.200.1.30", "10.200.1.40"]},
+    "S-CURSOS":     {"puerto_sw_c2": 7, "mac": "RELLENAR", "ips": ["10.200.2.10", "10.200.2.20", "10.200.2.30"]},
+    "IDS-Suricata": {"puerto_sw_c2": 9, "mac": "RELLENAR", "ips": ["10.200.0.20"]}
+  },
+  "control": {
+    "Controlador":  {"ip": "172.16.0.10", "mac": "RELLENAR", "switch": "SW-C1", "puerto": 3},
+    "onos-1":       {"ip": "172.16.0.11", "mac": "02:16:00:00:00:11", "switch": "SW-C1", "puerto": 3},
+    "onos-2":       {"ip": "172.16.0.12", "mac": "02:16:00:00:00:12", "switch": "SW-C1", "puerto": 3},
+    "onos-3":       {"ip": "172.16.0.13", "mac": "02:16:00:00:00:13", "switch": "SW-C2", "puerto": 3}
+  },
+  "espejos": {"SW-C1": 5, "SW-C2": 8},
+  "cores": {"SW-C1": {"hacia_SW-C2": 2, "pabellones": {"1": 1, "2": 2}, "salida": 4},
+            "SW-C2": {"hacia_SW-C1": 2, "pabellones": {"1": 2, "2": 1}, "salida": 2}}
+}

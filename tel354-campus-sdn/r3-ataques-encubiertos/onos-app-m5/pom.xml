@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  M5 - Evaluación, contención y confirmación (R3) · TEL354 Grupo 01
+  App OSGi para ONOS 2.7.0 (Java 11): servicio OSGi, comandos de Karaf (tel354:*) y recurso web
+  (WAB) en /onos/campus. Basada en los arquetipos onos-bundle, onos-cli y onos-rest 2.7.0.
+  Requiere tel354-api y tel354.m1 instalados antes.
+  Compilar:   mvn clean install
+  Instalar:   bash r3-ataques-encubiertos/onos-app-m5/instalar_m5.sh
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.onosproject</groupId>
+        <artifactId>onos-dependencies</artifactId>
+        <version>2.7.0</version>
+    </parent>
+
+    <groupId>pe.edu.pucp.tel354</groupId>
+    <artifactId>tel354-m5</artifactId>
+    <version>2.0.0</version>
+    <packaging>bundle</packaging>
+
+    <description>M5: evaluación de incidentes, contención N0-N2, reserva de mitigación y confirmación N3</description>
+    <url>https://www.pucp.edu.pe</url>
+
+    <properties>
+        <!-- La guía de estilo de ONOS (checkstyle) no aplica a las apps del grupo -->
+        <checkstyle.skip>true</checkstyle.skip>
+        <onos.app.name>tel354.m5</onos.app.name>
+        <onos.app.title>TEL354 M5 - Contención de R3</onos.app.title>
+        <onos.app.origin>PUCP TEL354 Grupo 01</onos.app.origin>
+        <onos.app.category>Security</onos.app.category>
+        <onos.app.url>https://www.pucp.edu.pe</onos.app.url>
+        <onos.app.readme>R3: evaluación (nivel de ataque y criticidad), reglas 300-302, reserva de 96
+            entradas por switch, confirmación N3; API REST /onos/campus/v1 y comandos tel354:*.</onos.app.readme>
+        <onos.app.requires>org.onosproject.openflow,tel354.api,tel354.m1</onos.app.requires>
+        <web.context>/onos/campus</web.context>
+        <api.version>1.0.0</api.version>
+        <api.title>TEL354 Campus SDN - API de TI</api.title>
+        <api.description>Incidentes de R3, modo de M5, reserva de mitigación y sesiones</api.description>
+        <api.package>pe.edu.pucp.tel354.m5.rest</api.package>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onos-api</artifactId>
+            <version>${onos.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onlab-osgi</artifactId>
+            <version>${onos.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onlab-misc</artifactId>
+            <version>${onos.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onos-cli</artifactId>
+            <version>${onos.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onos-rest</artifactId>
+            <version>${onos.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onlab-rest</artifactId>
+            <version>${onos.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
+            <version>1.4.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.karaf.shell</groupId>
+            <artifactId>org.apache.karaf.shell.core</artifactId>
+            <version>4.2.14</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>javax.ws.rs-api</artifactId>
+            <version>2.1</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.containers</groupId>
+            <artifactId>jersey-container-servlet</artifactId>
+            <version>2.27</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.9.10</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>pe.edu.pucp.tel354</groupId>
+            <artifactId>tel354-api</artifactId>
+            <version>2.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Driver JDBC embebido en el bundle (Java 11) -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.4</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <configuration>
+                    <instructions>
+                        <_wab>src/main/webapp/</_wab>
+                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
+                        <Web-ContextPath>${web.context}</Web-ContextPath>
+                        <Export-Package/>
+                        <Private-Package>pe.edu.pucp.tel354.m5.*</Private-Package>
+                        <Karaf-Commands>pe.edu.pucp.tel354.m5.cli</Karaf-Commands>
+                        <Embed-Dependency>postgresql;scope=compile|runtime;inline=false</Embed-Dependency>
+                        <Embed-Transitive>false</Embed-Transitive>
+                        <Import-Package>!org.checkerframework.*,com.sun.jna*;resolution:=optional,waffle*;resolution:=optional,org.osgi.service.jdbc*;resolution:=optional,javax.naming*;resolution:=optional,org.glassfish.jersey.servlet,*</Import-Package>
+                    </instructions>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.onosproject</groupId>
+                <artifactId>onos-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
