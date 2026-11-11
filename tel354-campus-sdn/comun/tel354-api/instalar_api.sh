@@ -23,7 +23,16 @@ if [ "${1:-}" != "--sin-compilar" ]; then
 fi
 [ -f "$OAR" ] || { echo "No existe $OAR"; exit 1; }
 echo "=== Instalando y activando $APP"
+# ONOS rechaza un .oar con la misma versión si la app ya existe: se retira antes. Retirar la API
+# retira también las apps que dependen de ella (M1, M3, M5...): reinstalarlas después.
+if curl -sf -u "$ONOS_AUTH" "$ONOS_URL/applications/$APP" >/dev/null; then
+  curl -sf -u "$ONOS_AUTH" -X DELETE "$ONOS_URL/applications/$APP" >/dev/null
+  echo "versión anterior retirada: reinstalar M1, M3 y M5"
+  sleep 3
+fi
 curl -sf -u "$ONOS_AUTH" -X POST -H "Content-Type: application/octet-stream" \
-     "$ONOS_URL/applications?activate=true" --data-binary @"$OAR" >/dev/null && echo "instalado y activo"
+     "$ONOS_URL/applications?activate=true" --data-binary @"$OAR" >/dev/null \
+  || { echo "ONOS rechazó $OAR"; exit 1; }
+echo "instalado y activo"
 curl -sf -u "$ONOS_AUTH" "$ONOS_URL/applications/$APP" | python3 -c \
   'import json,sys; a=json.load(sys.stdin); print("Estado:", a.get("state"), "| versión", a.get("version"))'
