@@ -35,7 +35,8 @@
         <onos.app.url>https://www.pucp.edu.pe</onos.app.url>
         <onos.app.readme>R1: 802.1X (EAP-TTLS de paso hacia FreeRADIUS), sesiones en PostgreSQL,
             relay DHCP con opción 82 hacia Kea, proxy ARP del gateway virtual y SessionService (R3).</onos.app.readme>
-        <onos.app.requires>org.onosproject.openflow,tel354.api</onos.app.requires>
+        <!-- tel354.base (M7): sin la regla 900 no llega EAPOL; ONOS impone así el orden de activación y retiro -->
+        <onos.app.requires>org.onosproject.openflow,tel354.api,tel354.base</onos.app.requires>
     </properties>
 
     <dependencies>

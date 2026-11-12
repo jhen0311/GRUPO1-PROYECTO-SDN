@@ -35,6 +35,7 @@ ovs-vsctl add-br br0 -- set bridge br0 other-config:datapath-id="$DPID" \
 IFS=, read -ra LISTA <<< "$PUERTOS"
 for par in "${LISTA[@]}"; do
   n=${par%%=*}; nic=${par#*=}
+  [ "$nic" = ens3 ] && { echo "ens3 es la interfaz de gestión y no se agrega al switch."; exit 1; }
   ip addr flush dev "$nic"
   ip link set "$nic" up
   ovs-vsctl add-port br0 "$nic" -- set interface "$nic" ofport_request="$n"

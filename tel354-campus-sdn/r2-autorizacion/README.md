@@ -4,7 +4,8 @@ R2 es proactivo: la matriz de autorización por rol (`v_permiso_efectivo`) se in
 
 | Archivo | Función |
 |---|---|
-| `proactivo/onos_static.py` | Régimen proactivo por la API REST de ONOS: core, Tablas 0, 1 y 2 de acceso y meters. Hace el papel de M2, M7 y M8 hasta que existan como apps. |
+| `proactivo/onos_static.py` | Régimen proactivo por la API REST de ONOS (maqueta de Mininet): core, Tablas 0, 1 y 2 de acceso y meters. |
+| `proactivo/base_auto.py` | Lo mismo en el slice. Desde la app `tel354.base` (M7 + M8) queda para diagnóstico (`--dry-run`) y como puente de la Tabla 1 hasta M2 (`--solo-tabla1`). |
 | `tests/export_matriz.py` | Exporta la matriz a `/tmp/matriz.json` (los hosts no leen la BD) |
 | `tests/bateria_r2.py` | Desde un host con sesión: intenta cada recurso y mide precisión y alcance |
 | `tests/contar_flows.py` | Compara las flow entries con el modelo del AVZ08: F_acc = c0 + P + 5S + C |

@@ -16,9 +16,16 @@ los enlaces LLDP que ONOS ya descubrió: no hay que llenarlos a mano.
   acceso: las mismas Tablas 0, 1 y 2 de base_slice.py, con el uplink y los puertos de host
   descubiertos.
 
+Desde la app tel354.base (M7 + M8, comun/onos-app-base) este script queda para diagnóstico:
+el régimen base y los caminos fijos los instala el controlador al detectar cada switch. Mientras
+M2 no programe la Tabla 1, --solo-tabla1 la carga por REST (permisos 100, comunes y los meters
+captura y cuarentena) con el appId tel354.tabla1, sin tocar lo de tel354.base.
+
 Uso (root en el controlador, con ONOS, los switches y PostgreSQL arriba):
   python3 r2-autorizacion/proactivo/base_auto.py --dry-run
-  python3 r2-autorizacion/proactivo/base_auto.py
+  python3 r2-autorizacion/proactivo/base_auto.py --solo-tabla1           # puente hasta M2
+  python3 r2-autorizacion/proactivo/base_auto.py --solo-tabla1 --borrar
+  python3 r2-autorizacion/proactivo/base_auto.py                         # todo (sin tel354.base)
   python3 r2-autorizacion/proactivo/base_auto.py --borrar
 """
 import argparse, collections, json, os, sys, time
@@ -45,7 +52,9 @@ import base_slice as B                     # noqa: E402  (reutiliza reglas_acces
 from onos_rest import *                    # noqa: E402,F401
 import requests                            # noqa: E402
 
-APP = "tel354.base"
+APP = "tel354.base.rest"        # distinto de los appId de la app tel354.base (tel354.m7 y tel354.m8)
+APP_T1 = "tel354.tabla1"       # puente de la Tabla 1 hasta que la programe M2
+APP_REST_METERS = "org.onosproject.rest"   # los meters creados por REST quedan con este appId
 CORE = f"of:{ENV['DPID_CORE']}"
 PABELLON = {n: f"of:{d}" for n, d in enumerate(ENV["DPIDS_ACCESO"].split(), start=1)}
 
@@ -94,6 +103,33 @@ def reglas_core(hacia, puerto_ctl, mac_ctl):
     return R
 
 
+def app_activa(nombre):
+    try:
+        return get(f"/applications/{nombre}").get("state") == "ACTIVE"
+    except requests.HTTPError:
+        return False
+
+
+def tabla1(a):
+    """Tabla 1 de cada switch de acceso (lo que hará M2): permisos 100, 60, 58, 57, 55, 50 y 0."""
+    if a.borrar:
+        borrar_app(APP_T1)
+        for d in PABELLON.values():
+            borrar_meters(d, app=APP_REST_METERS)
+        print("Tabla 1 y meters captura y cuarentena retirados.")
+        return
+    permisos = ([("ALUMNO", 16, "10.200.1.10", "TCP", 443)] * 13 if a.dry_run else B.leer_permisos(a.dsn))
+    B.HOST_PORTS = ()
+    for n, dev in PABELLON.items():
+        if a.sin_meters:
+            m = {"arp": {}, "captura": None, "cuarentena": None}
+        else:
+            m = {"arp": {}, "captura": crear_meter(dev, "PKTS_PER_SEC", 50, 20, a.dry_run),
+                 "cuarentena": crear_meter(dev, "KB_PER_SEC", 1000, 1000, a.dry_run)}
+        R = [r for r in B.reglas_acceso(dev, m, permisos) if r["tableId"] == 1]
+        print(f"acceso {dev} (pabellón {n}): Tabla 1 con {post_flows(R, app=APP_T1, dry=a.dry_run)} reglas")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--if-datos", default=ENV.get("IF_DATOS", "ens4"),
@@ -103,12 +139,21 @@ def main():
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--borrar", action="store_true")
     ap.add_argument("--sin-meters", action="store_true")
+    ap.add_argument("--solo-tabla1", action="store_true",
+                    help="solo la Tabla 1 y sus meters (con la app tel354.base activa)")
     a = ap.parse_args()
+
+    if a.solo_tabla1:
+        tabla1(a)
+        return
+    if not a.dry_run and app_activa("tel354.base"):
+        sys.exit("La app tel354.base está activa: ella instala el régimen base. "
+                 "Usar --dry-run (diagnóstico) o --solo-tabla1.")
 
     if a.borrar:
         borrar_app(APP)
         for d in PABELLON.values():
-            borrar_meters(d)
+            borrar_meters(d, app=APP_REST_METERS)
         print("Reglas y meters del régimen base retirados.")
         return
 

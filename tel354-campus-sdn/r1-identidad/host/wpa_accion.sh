@@ -8,14 +8,17 @@
 # La instala login.sh; no se ejecuta a mano. Argumentos: interfaz evento
 # =====================================================================
 IF="$1"; EVENTO="$2"
-LOG=/run/tel354/wpa-accion-$IF.log
+AQUI="$(cd "$(dirname "$0")" && pwd)"
+source "$AQUI/interfaz.sh"
+[ "$IF" = "$IF_GESTION" ] && exit 1                    # ens3 no se toca
+LOG=$RAIZ_SIS/run/tel354/wpa-accion-$IF.log
 case "$EVENTO" in
 CONNECTED)
   echo "$(date '+%F %T') 802.1X completado de nuevo: se renueva la IP" >> "$LOG"
-  timeout 5 dhclient -r -lf "/run/dhclient-$IF.leases" -pf "/run/dhclient-$IF.pid" "$IF" >/dev/null 2>&1
-  ip -4 addr flush dev "$IF"
-  timeout 30 dhclient -1 -lf "/run/dhclient-$IF.leases" -pf "/run/dhclient-$IF.pid" "$IF" >> "$LOG" 2>&1
-  GW=$(awk '/option routers/ {gsub(";",""); g=$3} END {print g}' "/run/dhclient-$IF.leases" 2>/dev/null)
+  timeout 5 dhclient -r -lf "$RAIZ_SIS/run/dhclient-$IF.leases" -pf "$RAIZ_SIS/run/dhclient-$IF.pid" "$IF" >/dev/null 2>&1
+  limpiar_ipv4 "$IF"
+  timeout 30 dhclient -1 -lf "$RAIZ_SIS/run/dhclient-$IF.leases" -pf "$RAIZ_SIS/run/dhclient-$IF.pid" "$IF" >> "$LOG" 2>&1
+  GW=$(awk '/option routers/ {gsub(";",""); g=$3} END {print g}' "$RAIZ_SIS/run/dhclient-$IF.leases" 2>/dev/null)
   if [ -n "$GW" ] && ! ip -4 route show default | grep -q "dev $IF"; then
     ip route replace 10.0.0.0/8 via "$GW" dev "$IF"
   fi

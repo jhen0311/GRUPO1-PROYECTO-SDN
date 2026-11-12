@@ -14,6 +14,10 @@
 set -euo pipefail
 RAIZ="$(cd "$(dirname "$0")/../.." && pwd)"
 source "$RAIZ/comun/config/${TEL354_ENV:-una_instancia.env}"
+# ens3 es la interfaz de gestión (SSH): este script nunca la limpia ni le pone direcciones
+for x in "${1:-}" "$IF_DATOS"; do
+  [ "$x" = ens3 ] && { echo "ens3 es la interfaz de gestión y no se toca: indicar la de datos."; exit 1; }
+done
 if [ "${1:-}" = "--quitar" ]; then
   ip addr flush dev "$IF_DATOS"; ip route del 10.0.0.0/8 2>/dev/null || true
   echo "IP de servicios retiradas de $IF_DATOS"; exit 0

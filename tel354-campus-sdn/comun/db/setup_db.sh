@@ -55,7 +55,7 @@ if [ "$ENVF" != "demo.env" ]; then
 # TEL354: clientes del modelo (piloto en el slice)
 host    ${PG_DB}  radius_ro  127.0.0.1/32       scram-sha-256
 host    ${PG_DB}  radius_ro  ${PG_RED_RADIUS:-10.200.3.0/24}     scram-sha-256
-$(for r in ${PG_RED_ONOS:-172.16.0.0/24}; do for u in onos_m1 onos_m2 onos_m5 onos_m6; do
+$(for r in ${PG_RED_ONOS:-172.16.0.0/24}; do for u in onos_m1 onos_m2 onos_m5 onos_m6 onos_m7; do
     echo "hostssl ${PG_DB}  $u    $r      scram-sha-256"; done; done)
 host    ${KEA_DB} ${KEA_DB_USER} ${PG_RED_KEA:-10.200.0.0/24}    scram-sha-256
 host    all       all        127.0.0.1/32       scram-sha-256
@@ -73,6 +73,7 @@ hostssl ${PG_DB}  onos_m1  ${IP_ONOS}/32    md5
 hostssl ${PG_DB}  onos_m2  ${IP_ONOS}/32    md5
 hostssl ${PG_DB}  onos_m5  ${IP_ONOS}/32    md5
 hostssl ${PG_DB}  onos_m6  ${IP_ONOS}/32    md5
+hostssl ${PG_DB}  onos_m7  ${IP_ONOS}/32    md5
 host  ${KEA_DB} ${KEA_DB_USER} 10.200.0.0/24 md5
 host  all       all        127.0.0.1/32     md5
 EOH

@@ -16,7 +16,8 @@ tel354-campus-sdn/
 │   ├── config/demo.env       parámetros de la demo (direcciones, secretos de prueba)
 │   ├── topo/                 campus_topo_demo.py: topología base en Mininet
 │   ├── db/                   modelo de datos (14 tablas), roles por componente, datos de prueba
-│   └── lib/onos_rest.py      cliente REST de ONOS y constructores de reglas
+│   ├── lib/onos_rest.py      cliente REST de ONOS y constructores de reglas
+│   └── onos-app-base/        M7 + M8 (app tel354.base): régimen base y caminos fijos al detectar cada switch
 ├── r1-identidad/             R1: autenticación y sesiones
 │   ├── onos-app-m1/          M1 (app de ONOS en Java): 802.1X, sesión, relay DHCP, proxy ARP
 │   ├── servicios/            ldap/, radius/, kea/
@@ -39,7 +40,7 @@ R1 y R2 forman el escenario base, y R3, R4 y R5 se apoyan en él (M3 consume el 
 
 | Fase | Módulo | Qué ocurre | Reglas |
 |---|---|---|---|
-| 0. Arranque | M7 + M8 + M2 (`onos_static.py`) | Régimen proactivo: core, Tablas 0–2 de acceso, meters | 900, 800, 600, 10, 100, 60, 58, 57, 55, 50, 200, 180 |
+| 0. Arranque | M7 + M8 (`tel354.base`, `comun/onos-app-base`) y M2 (Tabla 1; hoy `base_auto.py --solo-tabla1`) | Régimen proactivo al detectar cada switch: core, Tablas 0 y 2, meters `ctl_P`; Tabla 1 | 900, 800, 600, 10, 200, 180 (M7/M8) · 100, 60, 58, 57, 55, 50 (M2) |
 | 1. Autenticación | M1 | EAPOL (regla 900) ↔ RADIUS hacia FreeRADIUS; LDAP valida la contraseña y PostgreSQL da el rol | — |
 | 2. Sesión | M1 | Access-Accept → `sesion` AUTENTICADA y reglas del equipo | 525, 505 |
 | 3. Dirección IP | M1 | DHCP (525) con opción 82 → Kea → DHCPACK → `sesion` ACTIVA | 520, 110 por curso, 200, 190 |

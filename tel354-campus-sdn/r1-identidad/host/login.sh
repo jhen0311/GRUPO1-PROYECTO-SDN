@@ -12,14 +12,19 @@
 #      opción 82 y Kea asigna una IP del pool del rol y del pabellón.
 #
 # Uso, dentro del host (ver entrar.sh):   bash r1-identidad/host/login.sh [interfaz]
-# En las VM del slice (Ubuntu-1, Kali-1, ...) se indica la interfaz de datos: login.sh ens4
+# En las VM del slice se indica la interfaz de datos: login.sh vx-sw2 (con túnel) o login.sh ens4.
+# Sin argumento se usa la interfaz de túnel vx-* del equipo. La de gestión (ens3) no se toca nunca
+# y, con túnel, tampoco su portadora (ver interfaz.sh).
 # =====================================================================
 set -u
 AQUI="$(cd "$(dirname "$0")" && pwd)"
-IF="${1:-$(ip -o link show | awk -F': ' '$2 != "lo" {sub(/@.*/, "", $2); print $2; exit}')}"
-RUN=/run/tel354
+source "$AQUI/interfaz.sh"
+IF=$(interfaz_datos "${1:-}") || exit 1
+GESTION_ANTES=$(ipv4_gestion)
+avisar_gestion_caida
+RUN=$RAIZ_SIS/run/tel354
 CTRL=$RUN/wpa-ctrl
-CA=/etc/tel354/certs/ca.pem
+CA=$RAIZ_SIS/etc/tel354/certs/ca.pem
 mkdir -p "$RUN" && chmod 700 "$RUN"
 
 [ -n "$IF" ] && ip link show dev "$IF" >/dev/null 2>&1 || { echo "No hay interfaz de red en este equipo."; exit 1; }
@@ -88,17 +93,17 @@ fi
 
 # dhclient con archivos propios de la interfaz (los hosts de Mininet comparten el disco de la VM).
 # Rutas permitidas por el perfil AppArmor de dhclient; el hook evita que toque /etc/resolv.conf.
-HOOK=/etc/dhcp/dhclient-enter-hooks.d/zz-tel354
+HOOK=$RAIZ_SIS/etc/dhcp/dhclient-enter-hooks.d/zz-tel354
 cmp -s "$AQUI/dhclient-hook-tel354" "$HOOK" 2>/dev/null || cp "$AQUI/dhclient-hook-tel354" "$HOOK"
 printf 'Solicitando dirección IP (DHCP)... '
-if timeout 30 dhclient -1 -lf "/run/dhclient-$IF.leases" -pf "/run/dhclient-$IF.pid" "$IF" 2>/dev/null; then
+if timeout 30 dhclient -1 -lf "$RAIZ_SIS/run/dhclient-$IF.leases" -pf "$RAIZ_SIS/run/dhclient-$IF.pid" "$IF" 2>/dev/null; then
   echo "listo"
 else
   echo "sin respuesta del servidor DHCP"; exit 4
 fi
-# Si el equipo ya tiene otra ruta por defecto (p. ej., la de gestión en las VM del laboratorio),
-# dhclient no puede instalar la suya: la intranet (10.0.0.0/8) se alcanza por el gateway del rol.
-GW=$(awk '/option routers/ {gsub(";",""); g=$3} END {print g}' "/run/dhclient-$IF.leases" 2>/dev/null)
+# En las VM con interfaz de gestión, la ruta por defecto es la de gestión y el hook de dhclient
+# impide que el lease la reemplace: la intranet (10.0.0.0/8) se alcanza por el gateway del rol.
+GW=$(awk '/option routers/ {gsub(";",""); g=$3} END {print g}' "$RAIZ_SIS/run/dhclient-$IF.leases" 2>/dev/null)
 if [ -n "$GW" ] && ! ip -4 route show default | grep -q "dev $IF"; then
   ip route replace 10.0.0.0/8 via "$GW" dev "$IF"
 fi
@@ -109,4 +114,5 @@ wpa_cli -p "$CTRL" -i "$IF" -a "$AQUI/wpa_accion.sh" -B -P "$RUN/wpa-cli-$IF.pid
 echo
 ip -br -4 addr show dev "$IF"
 ip -4 route show default
+comprobar_gestion "$GESTION_ANTES"
 echo "Sesión abierta. Para cerrarla: bash $AQUI/logout.sh"

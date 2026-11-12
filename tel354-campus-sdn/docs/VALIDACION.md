@@ -1,12 +1,14 @@
 # Guía de validación de M1 y M5 en el slice del LAB5 (VNRT)
 
-**TEL354 · PUCP 2026-2 · Grupo 01 · Versión 1.3 · 10/11/2026**
+**TEL354 · PUCP 2026-2 · Grupo 01 · Versión 1.7 · 12/11/2026**
 
 Esta guía valida en el slice del LAB5 que el código de la versión 2.0 (tel354-api, M1 y M5) funciona: primero que compila contra ONOS 2.7 real, luego que las apps se activan en el controlador y, por último, que hacen su trabajo con hosts reales (802.1X, IP por rol, reglas de sesión, contención y cuarentena). Se parte del slice en su estado inicial, después de `slice_reset.yml`.
 
 El slice del LAB5 no es el piloto del LAB6, pero tiene lo necesario para validar M1 y M5: ONOS 2.7, un switch central, dos switches con dos hosts cada uno y una VM que puede hacer de todos los servidores. Lo que no se puede validar aquí es lo propio del clúster y del control in-band (prueba V9 de la Guía de M1).
 
-**Capturas.** Cada paso indica qué captura tomar (F01 a F34) para el informe de validación. Que se vean el prompt y el comando.
+Desde la versión 1.4 la guía incluye la app `tel354.base` (M7 + M8), que reemplaza a `base_auto.py`: su plan de pruebas (B0 a B12) está en la sección 7 bis. La versión 1.6 protege `ens3` en los scripts del host (paso 11) y agrega las pruebas locales previas al slice (paso 12 bis). La versión 1.7 registra los resultados de la validación de M7 y M8 (sección 7 ter) y corrige los pasos 4, 16, 17 y 24.
+
+**Capturas.** Cada paso indica qué captura tomar (F01 a F47 bis) para el informe de validación. Que se vean el prompt y el comando.
 
 **Cómo leer los comandos.** Antes de cada bloque se indica la VM y el prompt. Los bloques contienen solo comandos y van sin `sudo`: en cada VM se entra con `ubuntu`/`ubuntu` y se pasa a root con `sudo -i`. En la consola de ONOS el prompt es `onos@root >`.
 
@@ -110,10 +112,10 @@ docker rm -f onos 2>/dev/null; mkdir -p /etc/tel354/certs
 docker run -d --name onos --network host --restart unless-stopped \
   -e ONOS_APPS=drivers,openflow,gui2 -v /etc/tel354/certs:/etc/tel354/certs:ro onosproject/onos:2.7.0
 until curl -sf -u onos:rocks http://127.0.0.1:8181/onos/v1/applications >/dev/null; do sleep 5; done; echo "ONOS listo"
-echo "alias onos-cli='ssh -p 8101 -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa onos@localhost'" >> ~/.bashrc && source ~/.bashrc
+echo "alias onos-cli='ssh -p 8101 -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa onos@localhost'" >> ~/.bashrc && source ~/.bashrc
 ```
 
-Con Docker no viene el alias `onos-cli`: la consola de ONOS se abre por SSH al puerto 8101 (usuario `onos`, clave `rocks`), y la última línea crea el alias.
+Con Docker no viene el alias `onos-cli`: la consola de ONOS se abre por SSH al puerto 8101 (usuario `onos`, clave `rocks`), y la última línea crea el alias. El alias no guarda la clave del host: cada contenedor nuevo genera otra, y con una guardada `ssh` rechazaría la conexión («REMOTE HOST IDENTIFICATION HAS CHANGED»).
 
 **Captura F02:** la línea `ONOS listo`.
 
@@ -292,6 +294,8 @@ Resultado esperado: `core: pabellón 1 por 2, pabellón 2 por 3, controlador (<M
 
 **Captura F09:** la salida de los dos comandos.
 
+> Desde la versión 1.4, el régimen base lo instala la app `tel354.base` (M7 + M8) y `base_auto.py` queda para diagnóstico. La migración y sus pruebas están en la sección 7 bis.
+
 ### Paso 10. Configuración de M1 y M5
 
 En `root@controller:~/tel354-campus-sdn#` ejecutar:
@@ -345,6 +349,19 @@ ls /etc/tel354/certs/ca.pem && ip -br addr show ens4
 
 Resultado esperado: el `ca.pem` y `ens4` en UP, sin IPv4.
 
+**ens3 no se toca.** `ens3` es la interfaz de gestión de cada VM (SSH) y ningún script del proyecto la limpia, la configura ni hace 802.1X o DHCP sobre ella. `login.sh`, `logout.sh` y `wpa_accion.sh` tienen cinco barreras: no la eligen por defecto, la rechazan si se indica, el único punto que borra direcciones también la rechaza, el hook de dhclient impide que el lease de la interfaz de datos reemplace la ruta por defecto de gestión, y cada script compara la IPv4 de `ens3` al empezar y al terminar y avisa si cambió. `servicios_coubicados.sh` y `ovs_switch.sh` también la rechazan.
+
+**Interfaz de la sesión.** A `login.sh` y `logout.sh` se les pasa la interfaz de datos: con el túnel VXLAN, `vx-sw2` en h1 y h2 y `vx-sw3` en h3 y h4 (`ens4` queda como portadora del túnel y también se rechaza); sin túnel, `ens4`. Sin argumento eligen la interfaz de túnel del host. Esta guía aún no incluye los comandos para montar el túnel: su resultado está en el documento de validación (pestaña «Preparación y M1», captura F12).
+
+**Si un host pierde su IP de gestión** (PuTTY da «Connection timed out» y `ip -br addr` muestra `ens3` sin IPv4), se recupera desde la consola del VNRT. En `root@h2:~#` ejecutar:
+
+```bash
+networkctl reconfigure ens3
+ip -br addr show ens3
+```
+
+Si `ens3` sigue sin IPv4, ejecutar `dhclient -v ens3`. No usar `netplan apply` ni reiniciar la VM: pueden deshacer la configuración del túnel en `ens4`.
+
 ## 6. Pruebas de M1
 
 Ventanas recomendadas: el host a la izquierda y, a la derecha, `root@controller` con `docker logs -f --since 1m onos 2>&1 | grep -E "M1|M5"`; `root@sw2:~#` para las reglas. En `onos-cli` ejecutar una vez `log:set DEBUG pe.edu.pucp.tel354.m1`. Antes de cada prueba, `date` en el host para cruzar los tiempos con el log. Las pruebas son las de la Guía de M1 (Sección 13), con los nombres del LAB5.
@@ -352,15 +369,15 @@ Ventanas recomendadas: el host a la izquierda y, a la derecha, `root@controller`
 | # | Host y comando | Resultado esperado |
 |---|---|---|
 | V1 | h1: `ping -c 2 -W 1 10.200.1.10` | Sin IP y sin respuesta |
-| V2 | h1: `bash r1-identidad/host/login.sh ens4` (alumno01 / Alumno2026!) y luego `curl -s http://10.200.1.10:443/` | IP 10.17.x.y/12, gateway 10.16.0.1; responde el Campus Virtual. En ONOS: EAPOL-Start, Access-Accept, AUTENTICADA, primer DHCPDISCOVER, ACTIVA |
+| V2 | h1: `bash r1-identidad/host/login.sh vx-sw2` (alumno01 / Alumno2026!) y luego `curl -s http://10.200.1.10:443/` | IP 10.17.x.y/12, gateway 10.16.0.1; responde el Campus Virtual. En ONOS: EAPOL-Start, Access-Accept, AUTENTICADA, primer DHCPDISCOVER, ACTIVA |
 | V3 | sw2: `ovs-ofctl -O OpenFlow13 dump-flows sw2 --no-stats \| grep -E "priority=(525\|520\|505\|200\|190\|110)"` | Las 6 reglas de la sesión; 525 y 505 con `meter:` |
 | V4 | h3: login con docente01 (Docente2026!); h4: login con jp01 (Jp2026!) | 10.50.x.y y 10.34.x.y, VLAN 102 |
 | V5 | h2: login con alumno02 y `nmap -sn -n 10.17.0.0/24` | `0 hosts up`; ArpProbe en el log |
-| V6 | h2: `hping3 -S -a 10.17.0.77 -p 443 -c 3 10.200.1.10` y `timeout 5 arpspoof -i ens4 10.16.0.1` | BindingViolation (IP) y BindingViolation (ARP) inequívoca |
+| V6 | h2: `hping3 -S -a 10.17.0.77 -p 443 -c 3 10.200.1.10` y `timeout 5 arpspoof -i vx-sw2 10.16.0.1` | BindingViolation (IP) y BindingViolation (ARP) inequívoca |
 | V7 | ONOS: `tel354:sesiones` y `tel354:sesion-revocar <id de h2>` | El puerto de h2 baja 5 s; EAP-Request/Identity; h2 se reautentica solo |
 | V8 | sw2: `ovs-ofctl -O OpenFlow13 mod-port sw2 <puerto de h1> down; sleep 3; ovs-ofctl -O OpenFlow13 mod-port sw2 <puerto de h1> up` | Sesión de h1 cerrada con DESCONEXION |
-| V8' | h1: `SIN_DHCP=1 bash r1-identidad/host/login.sh ens4` | A los 60 s, `sin DHCP en 60 s` y cierre con DESCONEXION |
-| V10 | h1: `bash r1-identidad/host/logout.sh ens4` | Reglas retiradas y sesión CERRADA |
+| V8' | h1: `SIN_DHCP=1 bash r1-identidad/host/login.sh vx-sw2` | A los 60 s, `sin DHCP en 60 s` y cierre con DESCONEXION |
+| V10 | h1: `bash r1-identidad/host/logout.sh vx-sw2` | Reglas retiradas y sesión CERRADA |
 
 *Tabla 4. Pruebas de M1 en el LAB5. El número de puerto de cada host en sw2 lo muestra `ovs-ofctl -O OpenFlow13 show sw2`.*
 
@@ -390,7 +407,7 @@ curl -s -u onos:rocks -X POST -H "Content-Type: application/json" http://127.0.0
 | P1 | `tel354:r3-simular <h2> P --destino 10.200.1.30:tcp:21,22,23,25,80,110,135,139,443,445` | sw2: regla 300 hacia 10.200.1.30 (900 s); `tel354:reserva` = 1 |
 | P2 | `tel354:r3-simular <h2> N --destino 10.200.1.30:tcp:5432` | sw2: 302, 301 ×2 y 300 con `meter:`; `dump-meters sw2`; en h2, el DNS responde y el Campus Virtual no |
 | P3 | `tel354:r3-simular-contador <incidente P2>` | `renovado por 120 s` |
-| P4 | h2: `logout.sh` y `login.sh` | Las 4 reglas con la IP nueva |
+| P4 | h2: `logout.sh vx-sw2` y `login.sh vx-sw2` | Las 4 reglas con la IP nueva |
 | P5 | Esperar 120 s | `venció sin renovación`; reserva en 0 |
 | P6 | controller: `curl -s -u onos:rocks -X POST -H "Content-Type: application/json" http://127.0.0.1:8181/onos/campus/v1/incidentes/<P2>/confirmar -d '{"minutos": 10, "motivo": "validación P6"}'` | h2 pasa a 10.113.x.y (VLAN 999); solo DNS |
 | P7 | `tel354:r3-simular <h4> D --destino 10.200.0.5 --destino 10.200.0.13 … (8 destinos)` y luego `tel354:incidente-descartar <P7> --motivo "validación"` | sw3: N2 y luego sin reglas |
@@ -447,13 +464,431 @@ Para terminar las sanciones de P6 y P10 antes de tiempo, en `root@controller:~#`
 su postgres -c "psql -d campus -c \"UPDATE cuarentena SET inicio = now() - interval '2 min', fin = now() - interval '1 min' WHERE fin > now() AND incidente_id IN (SELECT id FROM incidente WHERE fuente = 'SIM')\""
 ```
 
+### Paso 12 bis. Pruebas locales antes del slice
+
+Dos bancos de prueba corren en controller (o en cualquier equipo con Java y bash) sin tocar la red. En `root@controller:~/tel354-campus-sdn#` ejecutar:
+
+```bash
+bash r1-identidad/host/probar_host.sh
+bash comun/onos-app-base/banco/banco.sh
+```
+
+Resultado esperado: `Resultado: todas las verificaciones pasan` en ambos.
+
+- `probar_host.sh` ejecuta `login.sh`, `logout.sh`, `wpa_accion.sh` y el hook de dhclient con `ip`, `wpa_supplicant`, `wpa_cli` y `dhclient` simulados, en cuatro tipos de equipo (VM con túnel, sin túnel, con dos túneles y host de Mininet). Comprueba en 27 casos que `ens3` conserva su IP y su ruta por defecto, y que ningún comando la toca. Con los scripts de la v3 da 20 fallas: reproduce el problema de h2.
+- `banco.sh` ejecuta la app `tel354.base` real contra un ONOS y unos switches simulados (reglas y meters asíncronos, rechazo de una regla cuyo meter aún no existe, reinstalación desde el almacén) y recorre 15 escenarios con 44 verificaciones: los de B2 a B11 y casos que no se pueden provocar a voluntad en el slice (reinicio de la app sin enlaces descubiertos, pérdida de un enlace, meter borrado por fuera, pabellón apagado al arrancar).
+
+**Captura F34 bis:** la última línea de los dos bancos.
+
+## 7 bis. Pruebas de tel354.base (M7 + M8)
+
+La app instala el régimen base al detectar cada switch: Tabla 0 (900, 800 con meter `ctl_P`, 600, 10) con el appId `tel354.m7`, y Tabla 2 fija y core con `tel354.m8`. La Tabla 1 es de M2; mientras tanto la carga el puente `base_auto.py --solo-tabla1`. Antes de empezar, cerrar sesión en los cuatro hosts (`logout.sh vx-sw2` en h1 y h2, `logout.sh vx-sw3` en h3 y h4).
+
+| Prueba | Qué verifica | Paso | Captura |
+|---|---|---|---|
+| B0 | El conjunto de reglas, sin ONOS | 14 | Salida del instalador |
+| B1 | La app compila contra ONOS 2.7 real y se activa | 14 | F35 |
+| B2 | Régimen del slice al migrar desde `base_auto.py` | 14 | F35, F36 |
+| B3 | appId y cookie por módulo; regresión de M1 | 15 | F37, F38 |
+| B4 | Idempotencia: reinicio del bundle con la app activa | 16 | F39 |
+| B5 | Pabellón nuevo: una fila y el switch se conecta | 17 | F40 |
+| B6 | La base de datos manda: reasignar un pabellón | 18 | F41 |
+| B7 | Switch que no está en `switch_acceso` | 19 | F42 |
+| B8 | Puerto de host nuevo y puerto retirado | 20 | F43 |
+| B9 | Reinicio del switch: pierde reglas y meters | 21 | F44 |
+| B10 | Caída de PostgreSQL | 22 | F45 |
+| B11 | Retiro en orden por la dependencia de M1 | 23 | F46 |
+| B12 | Convivencia con M5 y M3 | 24 | F47 |
+
+*Tabla 5 ter. Plan de pruebas de M7 y M8. Los criterios de aceptación están en la pestaña «Pruebas de M7 y M8» del documento de validación.*
+
+Los hosts necesitan los scripts nuevos de `r1-identidad/host/` (protegen la interfaz de gestión). En `root@controller:~/tel354-campus-sdn#` ejecutar (contraseña `ubuntu`):
+
+```bash
+for ip in 192.168.0.21 192.168.0.22 192.168.0.23 192.168.0.24; do
+  scp -rq r1-identidad/host ubuntu@$ip:/tmp/
+  ssh -t ubuntu@$ip "sudo cp /tmp/host/* /root/tel354-campus-sdn/r1-identidad/host/"
+done
+```
+
+### Paso 13. Rol onos_m7 en PostgreSQL
+
+Se agrega el rol sin rehacer la base (02_roles.sql es idempotente).
+
+En `root@controller:~/tel354-campus-sdn#` ejecutar:
+
+```bash
+su postgres -c "psql -q -d campus" < comun/db/02_roles.sql
+PGV=$(ls /etc/postgresql | sort -n | tail -1); HBA=/etc/postgresql/$PGV/main/pg_hba.conf
+grep -q onos_m7 $HBA || sed -i '/onos_m6/{p;s/onos_m6/onos_m7/}' $HBA
+systemctl reload postgresql
+PGPASSWORD=m7-demo psql "host=10.200.3.12 dbname=campus user=onos_m7 sslmode=require" -c "SELECT * FROM switch_acceso"
+```
+
+Resultado esperado: las dos filas (`of:0000000000000001` → 1, `of:0000000000000002` → 2).
+
+### Paso 14. Migración: de base_auto.py a la app
+
+Se retiran las apps que dependen del régimen base, se instala `tel354.base` (con `--migrar`, que borra lo que dejó `base_auto.py`), se carga el puente de la Tabla 1 y se reinstalan las apps en orden. M1 se recompila porque ahora declara `tel354.base` en `onos.app.requires`: ONOS no lo instala sin ella.
+
+En `root@controller:~/tel354-campus-sdn#` ejecutar:
+
+```bash
+export TEL354_ENV=una_instancia.env
+bash r3-ataques-encubiertos/onos-app-m5/instalar_m5.sh --desinstalar
+curl -s -u onos:rocks -X DELETE http://127.0.0.1:8181/onos/v1/applications/tel354.m3
+bash r1-identidad/onos-app-m1/instalar_m1.sh --desinstalar
+bash comun/onos-app-base/instalar_base.sh --migrar 2>&1 | tee /root/mvn.log
+```
+
+Resultado esperado: `Resultado: todas las verificaciones pasan` (prueba del conjunto de reglas sin ONOS) y `Estado: ACTIVE | versión 2.0.0`.
+
+En `onos@root >` (ventana D) ejecutar:
+
+```
+tel354:base
+```
+
+Resultado esperado:
+
+| switch | rol | uplink | hosts | reglas | meters |
+|---|---|---|---|---|---|
+| of:0000000000000001 | acceso 1 | 1 | [2,3] | 7/7 | 2/2 |
+| of:0000000000000002 | acceso 2 | 3 | [1,2] | 7/7 | 2/2 |
+| of:00000000000000c1 | core | - | [] | 20/20 | - |
+
+**Captura F35:** `tel354:base`.
+
+En `root@controller:~/tel354-campus-sdn#` (ventana B) ejecutar:
+
+```bash
+docker logs onos 2>&1 | grep -E "M7|M8" | tail -20
+```
+
+Resultado esperado: una línea `régimen base completo` por switch, con los dos tiempos (Flow-Mods confirmados y reglas ADDED).
+
+**Captura F36:** el log.
+
+### Paso 15. Reglas instaladas y puente de la Tabla 1
+
+En `onos@root >` ejecutar:
+
+```
+tel354:base -r
+```
+
+En `root@controller:~/tel354-campus-sdn#` ejecutar:
+
+```bash
+python3 r2-autorizacion/proactivo/base_auto.py --solo-tabla1
+bash r1-identidad/onos-app-m1/instalar_m1.sh
+bash r3-ataques-encubiertos/instalar_r3.sh m3
+bash r3-ataques-encubiertos/onos-app-m5/instalar_m5.sh
+```
+
+Resultado esperado: `Tabla 1 con 21 reglas` en cada switch de acceso (7 + 21 = 28, igual que antes) y las cuatro apps ACTIVE. Luego, en h1, repetir V2 y V3 (login, DHCP y reglas de sesión).
+
+En `root@sw2:~#` ejecutar:
+
+```bash
+ovs-ofctl -O OpenFlow13 dump-flows $(ovs-vsctl list-br | head -1) | grep -E "priority=(900|800|600|525|505)"
+```
+
+Resultado esperado: la 800 de cada puerto de host con `meter:N`, y las 525 y 505 de la sesión de h1 con el mismo `meter:N` que la 800 de su puerto (M1 lo toma de ahí).
+
+**Captura F37:** `tel354:base -r` y la salida del puente. **F38:** el `dump-flows` con la sesión de h1 activa.
+
+### Paso 16. Idempotencia: reinicio de la app sin desactivarla
+
+Con tráfico de h1 hacia el Campus Virtual, se reinicia el bundle (la app sigue ACTIVE, así que no retira nada). El tráfico es TCP 443, permitido al rol: un ping no sirve, porque el ICMP no está en la matriz de permisos y la regla 55 lo envía al controlador, donde nadie lo responde hasta que exista M2.
+
+En `root@h1:~/tel354-campus-sdn#` ejecutar (dura unos 30 s):
+
+```bash
+for i in $(seq 60); do curl -s -m 1 -o /dev/null -w "%{http_code} " http://10.200.1.10:443/; sleep 0.5; done; echo
+```
+
+Mientras corre, en `onos@root >` ejecutar (el id es el de `tel354-base`, no el de `_onos-gui2-base-jar`):
+
+```
+bundle:list | grep -i base
+bundle:restart <id de tel354-base>
+tel354:base
+```
+
+En `root@controller:~/tel354-campus-sdn#` ejecutar:
+
+```bash
+docker logs onos 2>&1 | grep -E "M7|M8" | tail -8
+```
+
+Resultado esperado: `M7+M8 detenidos (instancia apagada)`, `M7+M8 iniciados` y `régimen base completo ... Flow-Mods confirmados a los - ms` (ningún Flow-Mod: no aparece ninguna línea `+N -M reglas`). Las 60 respuestas son `200` y los meters siguen siendo los mismos.
+
+**Captura F39:** el log, `tel354:base` y la salida del `curl`.
+
+### Paso 17. Pabellón nuevo: una fila y el switch se conecta
+
+Se simula un pabellón nuevo con sw3: se le da un datapath-id que ONOS nunca vio (`0000000000000003`) y se agrega su fila en `switch_acceso`. Es el caso real: ni el perfil ni ONOS cambian. (Desconectar y reconectar el mismo switch no sirve: ONOS conserva sus reglas y meters, porque `purgeOnDisconnection` es `false`, y los reinstala él mismo.)
+
+En `root@controller:~#` ejecutar:
+
+```bash
+su postgres -c "psql -d campus -c \"INSERT INTO pabellon VALUES (3, 'Pabellón 3 (prueba)', 103) ON CONFLICT DO NOTHING; INSERT INTO switch_acceso VALUES ('of:0000000000000003', 3, '172.16.0.99') ON CONFLICT DO NOTHING\""
+```
+
+En `root@sw3:~#` ejecutar:
+
+```bash
+BR=$(ovs-vsctl list-br | head -1); CTL=$(ovs-vsctl get-controller $BR | xargs); echo "$BR -> $CTL"
+ovs-vsctl del-controller $BR
+ovs-vsctl set bridge $BR other-config:datapath-id=0000000000000003
+ovs-ofctl -O OpenFlow13 del-flows $BR; ovs-ofctl -O OpenFlow13 del-meters $BR
+ovs-vsctl set-controller $BR $CTL
+```
+
+A los 15 s, en `onos@root >` ejecutar:
+
+```
+tel354:base
+```
+
+En `root@controller:~/tel354-campus-sdn#` ejecutar:
+
+```bash
+docker logs onos 2>&1 | grep -E "M7|M8" | tail -8
+```
+
+Resultado esperado: `switch_acceso con 3 switches de acceso` (se relee al aparecer el switch), `M7: of:0000000000000003 (acceso 3): +2 -0 reglas [sin enlace con el core]`, luego las 5 restantes, `M8: of:00000000000000c1 (core): +9 -0 reglas` (pabellón 3) y `régimen base completo` con sus dos tiempos. En `tel354:base`, el switch nuevo con 7/7 y 2/2, y el core con 29/29 ($9 \cdot 3 + 2$). El tiempo se mide desde la línea `Device of:0000000000000003 connected` de ONOS (`docker logs onos 2>&1 | grep -i 00:00:00:00:00:00:00:03`), que es también desde donde cuenta la app: la lectura de `switch_acceso` que aparece antes puede venir de la revisión periódica, cuando la fila se inserta antes de reconectar el switch. Una corrida basta para validar; para un rango de tiempos, repetir con datapath-id nuevos (05, 06…), porque reconectar el mismo switch no lo hace nuevo para ONOS. La Tabla 1 del switch nuevo no se carga: el puente REST depende del perfil, y eso es justamente lo que debe asumir M2.
+
+Para devolver sw3 a su identidad, en `root@sw3:~#` ejecutar:
+
+```bash
+ovs-vsctl del-controller $BR
+ovs-vsctl set bridge $BR other-config:datapath-id=0000000000000002
+ovs-ofctl -O OpenFlow13 del-flows $BR; ovs-ofctl -O OpenFlow13 del-meters $BR
+ovs-vsctl set-controller $BR $CTL
+```
+
+En `onos@root >` ejecutar `device-remove of:0000000000000003` y, en `root@controller:~#`:
+
+```bash
+su postgres -c "psql -d campus -c \"DELETE FROM switch_acceso WHERE dpid = 'of:0000000000000003'\""
+```
+
+ONOS reinstala por su cuenta las reglas (≤ 5 s) y los meters (≤ 10 s) de `of:0000000000000002`, porque siguen en su almacén. Esa reinstalación no la hace la app: en el log no aparece ninguna línea `+N -M` de M7 para ese switch.
+
+**Captura F40:** `tel354:base` con el switch nuevo, el log de una corrida y la tabla con los tres tiempos.
+
+### Paso 18. La base de datos manda: reasignar un pabellón
+
+Se cambia el pabellón de sw3 en `switch_acceso` (de 2 a 3), sin tocar el perfil ni ONOS.
+
+En `root@controller:~#` ejecutar:
+
+```bash
+su postgres -c "psql -d campus -c \"INSERT INTO pabellon VALUES (3, 'Pabellón 3 (prueba)', 103) ON CONFLICT DO NOTHING; UPDATE switch_acceso SET pabellon_id = 3 WHERE dpid = 'of:0000000000000002'\""
+sleep 35; docker logs onos 2>&1 | grep -E "M7|M8" | tail -4
+su postgres -c "psql -d campus -c \"UPDATE switch_acceso SET pabellon_id = 2 WHERE dpid = 'of:0000000000000002'\""
+```
+
+Resultado esperado: en menos de 30 s, `switch_acceso con 2 switches de acceso: {…01=1, …02=3}` y `M8: of:00000000000000c1 (core): +9 -9 reglas` (VLAN 102 → 103). Las reglas de sw3 no cambian: no dependen del número de pabellón. Al revertir, vuelve a +9 -9.
+
+**Captura F41:** el log.
+
+### Paso 19. Switch que no está en switch_acceso (B7)
+
+sw3 se conecta con un datapath-id sin fila en la base (`0000000000000004`). Después de cada paso de esta sección, el estado se comprueba con `tel354:base` en `onos@root >` y con el log (`docker logs onos 2>&1 | grep -E "M7|M8" | tail -8`) en la ventana B.
+
+En `root@sw3:~#` ejecutar:
+
+```bash
+BR=$(ovs-vsctl list-br | head -1); CTL=$(ovs-vsctl get-controller $BR | xargs); echo "$BR -> $CTL"
+ovs-vsctl del-controller $BR
+ovs-vsctl set bridge $BR other-config:datapath-id=0000000000000004
+ovs-ofctl -O OpenFlow13 del-flows $BR; ovs-ofctl -O OpenFlow13 del-meters $BR
+ovs-vsctl set-controller $BR $CTL
+```
+
+Resultado esperado, a los 15 s: en `tel354:base`, `of:0000000000000004` con rol `sin rol`, reglas 0/0 y la nota `no está en switch_acceso`. El core sigue en 20/20.
+
+Para devolver sw3 a su identidad, en `root@sw3:~#` ejecutar:
+
+```bash
+ovs-vsctl del-controller $BR
+ovs-vsctl set bridge $BR other-config:datapath-id=0000000000000002
+ovs-ofctl -O OpenFlow13 del-flows $BR; ovs-ofctl -O OpenFlow13 del-meters $BR
+ovs-vsctl set-controller $BR $CTL
+```
+
+En `onos@root >` ejecutar:
+
+```
+device-remove of:0000000000000004
+```
+
+**Captura F42:** `tel354:base` con el switch `sin rol`.
+
+### Paso 20. Puerto de host nuevo y puerto retirado (B8)
+
+En `root@sw2:~#` ejecutar:
+
+```bash
+BR=$(ovs-vsctl list-br | head -1)
+ovs-vsctl add-port $BR prueba0 -- set interface prueba0 type=internal
+```
+
+Resultado esperado, a los 5 s: sw2 con un puerto más en `hosts`, 8/8 reglas y 3/3 meters; en el log, `+1 -0 reglas`.
+
+En `root@sw2:~#` ejecutar:
+
+```bash
+ovs-vsctl del-port $BR prueba0
+```
+
+Resultado esperado: sw2 vuelve a 7/7 y 2/2; en el log, `meter N sin puerto de host: se retira` y `+0 -1 reglas`.
+
+**Captura F43:** `tel354:base` con 8/8 y luego con 7/7, y el log.
+
+### Paso 21. Reinicio del switch (B9)
+
+sw2 pierde sus reglas y meters, pero conserva su datapath-id. Con h1 con sesión abierta.
+
+En `root@sw2:~#` ejecutar:
+
+```bash
+BR=$(ovs-vsctl list-br | head -1); CTL=$(ovs-vsctl get-controller $BR | xargs)
+ovs-vsctl del-controller $BR
+ovs-ofctl -O OpenFlow13 del-flows $BR; ovs-ofctl -O OpenFlow13 del-meters $BR
+ovs-vsctl set-controller $BR $CTL
+sleep 30
+ovs-ofctl -O OpenFlow13 dump-flows $BR | grep -E "priority=(900|800|600|525|505)"
+ovs-ofctl -O OpenFlow13 dump-meters $BR | grep -c "meter="
+```
+
+Resultado esperado: la 900, las dos 800 con `meter:N` y la 600 de vuelta, y los dos meters `ctl_P` (más los dos del puente de la Tabla 1). En el log no hay líneas `+N -M` para `of:0000000000000001`: reinstala ONOS, no la app. Se anota si las 525 y 505 de h1 también vuelven. Es la prueba de resultado menos seguro: las 800 dependen de que ONOS reinstale primero sus meters; si alguna no vuelve en 30 s, es un hallazgo.
+
+**Captura F44:** el `dump-flows`, el conteo de meters y el log.
+
+### Paso 22. Caída de PostgreSQL (B10)
+
+Sin logins durante la prueba: RADIUS y Kea también usan la base.
+
+En `root@controller:~#` ejecutar:
+
+```bash
+systemctl stop postgresql
+sleep 40; docker logs onos 2>&1 | grep -E "M7|M8" | tail -3
+systemctl start postgresql
+sleep 35; docker logs onos 2>&1 | grep -E "M7|M8" | tail -2
+```
+
+Resultado esperado: una sola línea `no se pudo leer switch_acceso (…); se mantiene lo último conocido`, sin líneas `+N -M`. Al volver la base, `switch_acceso con 2 switches de acceso`. `tel354:base` no cambia en ningún momento.
+
+**Captura F45:** la salida de los dos `docker logs`.
+
+### Paso 23. Retiro en orden (B11)
+
+Retira M1 y M5 y los vuelve a activar. Los hosts sin sesión.
+
+En `onos@root >` ejecutar:
+
+```
+app deactivate tel354.base
+apps -s | grep tel354
+```
+
+En `root@controller:~#` ejecutar:
+
+```bash
+for a in tel354.m7 tel354.m8; do curl -s -u onos:rocks http://127.0.0.1:8181/onos/v1/flows/application/$a | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["flows"]))'; done
+curl -s -u onos:rocks http://127.0.0.1:8181/onos/v1/meters | python3 -c 'import json,sys; print(sum(m.get("appId") == "tel354.m7" for m in json.load(sys.stdin)["meters"]))'
+docker logs onos 2>&1 | grep detenido | tail -3
+```
+
+Resultado esperado: solo `tel354.api` y `tel354.m3` siguen activas (con `*`); los tres conteos dan 0; en el log, `M5 detenido`, `M1 detenido` y `M7+M8 detenidos (app desactivada)`, en ese orden.
+
+En `onos@root >` ejecutar:
+
+```
+app activate tel354.m1
+app activate tel354.m5
+tel354:base
+```
+
+Resultado esperado: activar M1 activa también `tel354.base`, y el régimen vuelve a 7/7, 7/7 y 20/20.
+
+**Captura F46:** `apps -s`, los tres conteos y el log.
+
+### Paso 24. Convivencia con M5 y M3 (B12)
+
+Se repiten la contención N2 (P1 de la sección 7, con dos destinos críticos) y las pruebas de contadores de M3: C2 (con tráfico, la contención se renueva) y C3 (sin tráfico, vence). El ping va **antes** de la contención: con `n2Seg` en 30, sin tráfico la contención vence a los 30 s y no da tiempo de mirar el switch. Se usa un usuario sin incidentes en las últimas 24 h (en `tel354:incidentes`): uno nuevo dentro de ese plazo cuenta como reincidencia y sube un nivel.
+
+En `root@controller:~/tel354-campus-sdn#` ejecutar:
+
+```bash
+sed 's/"n2Seg": 3600/"n2Seg": 30/' r3-ataques-encubiertos/config/r3-netcfg.json > /tmp/r3-prueba.json
+curl -s -u onos:rocks -X POST -H "Content-Type: application/json" http://127.0.0.1:8181/onos/v1/network/configuration -d @/tmp/r3-prueba.json
+docker logs -f --since 5s onos 2>&1 | grep -E "M3|M5|M7"
+```
+
+En `root@h1:~/tel354-campus-sdn#` ejecutar y dejar corriendo (la regla 301 de N2 descarta lo que va a 10.0.0.0/8, y M3 cuenta esos paquetes):
+
+```bash
+ping -i 0.5 10.200.1.10
+```
+
+En `onos@root >` ejecutar, con el id de la sesión de h1:
+
+```
+tel354:sesiones
+tel354:r3-simular --destino 10.200.0.14 --destino 10.200.3.12 <id> D
+tel354:incidentes
+```
+
+Con el ping corriendo, en `root@sw2:~#` ejecutar:
+
+```bash
+BR=$(ovs-vsctl list-br | head -1)
+ovs-ofctl -O OpenFlow13 dump-flows $BR | grep -E "priority=(800|300|301|302)" | sed -E 's/duration=[^,]*, //; s/n_bytes=[^,]*, //'
+ovs-ofctl -O OpenFlow13 dump-meters $BR | grep -c "meter="
+```
+
+Cortar el ping con Ctrl+C, esperar 40 s y, en `onos@root >`, ejecutar `tel354:base`. Al terminar, en `root@controller:~/tel354-campus-sdn#` volver a la configuración normal:
+
+```bash
+curl -s -u onos:rocks -X POST -H "Content-Type: application/json" http://127.0.0.1:8181/onos/v1/network/configuration -d @r3-ataques-encubiertos/config/r3-netcfg.json
+```
+
+Resultado esperado: un incidente nuevo en N2; las reglas 300 a 302 de M5 junto a las 800 de M7; la 300 usa el meter `contencion`, distinto de los `ctl_P` (un meter más en el conteo). Con ping, `CounterDelta` cada 5 s y `renovado por 30 s`; sin tráfico, `venció sin renovación` entre 30 y 35 s. En el log no aparece ninguna línea de M7 sobre sw2 y `tel354:base` sigue en 7/7 y 2/2.
+
+**Captura F47:** el `dump-flows`, `tel354:incidentes` y `tel354:base`. **F47 bis:** el log de renovaciones y vencimiento.
+
+## 7 ter. Resultados de la validación en el slice (12/11/2026)
+
+| Prueba | Resultado | Dato clave |
+|---|---|---|
+| B0 | Pasa | Conjunto de reglas y banco de la app (44 verificaciones) en verde en controller |
+| B1 | Pasa | Las cinco apps ACTIVE 2.0.0 (tras corregir `MeterState.REMOVED`, que no existe en ONOS 2.7.0) |
+| B2 | Pasa | 7 + 7 + 20 reglas, 2 + 2 meters; las 800 salen después de sus meters, sin rechazos |
+| B3 | Pasa | Login sin interfaz: `ens3` intacta; 525 y 505 con el meter de la 800; Campus Virtual `200` |
+| B4 | Pasa | 0 Flow-Mods al reiniciar la app; 60/60 respuestas `200` durante el reinicio |
+| B5 | Pasa | Una fila en `switch_acceso`; core de 20 a 29 reglas; t_conv = 7,2 s desde `Device connected` (cota 9,3 s) |
+| B6 | Pasa | `+9 -9` en el core al reasignar y al revertir, en la revisión siguiente (≤ 30 s) |
+| B9 | Pasa | ONOS reinstaló reglas y meters del switch, incluidas las 800 y la sesión de M1; la app no envió nada |
+| B12 | Pasa | Meter de M5 intacto; renovación cada 5 s; vencimiento 34,1 s después de la última renovación |
+| B7, B8, B10, B11 | Cubiertas por el banco local | No se repitieron en el slice |
+
+*Tabla 5 quater. Resultados de M7 y M8 en el slice. Detalle y capturas en el documento de validación, pestaña «Pruebas de M7 y M8».*
+
+Pendientes menores, sin efecto en el funcionamiento: la app registra dos veces su configuración al arrancar; tras reconectarse un switch, el tiempo «ADDED» del log no mide una convergencia (ONOS aún marca las reglas como ADDED); y M5 espera 2 s la confirmación de su meter, que ONOS da cada 10 s, por lo que siempre avisa.
+
 ## 8. Qué enviar si algo falla
 
 | Nivel | Evidencia |
 |---|---|
 | 1 | `/root/mvn.log` del módulo que falló |
 | 2 | Salida de `apps -a -s`, `scr:list` y `docker logs onos 2>&1 \| grep -iE "tel354\|exception" \| tail -60` |
-| 3 | La prueba, el resultado obtenido, `docker logs onos 2>&1 \| grep -E "M1:\|M5:" \| tail -40` y el `dump-flows` del switch |
+| 3 | La prueba, el resultado obtenido, `docker logs onos 2>&1 \| grep -E "M1:\|M5:\|M7\|M8" \| tail -40` y el `dump-flows` del switch |
 
 *Tabla 6. Evidencias para corregir un fallo.*
 
@@ -469,4 +904,4 @@ ip addr flush dev ens4
 cd /root/TEL354_LAB5_2026_2/ansible && ansible-playbook slice_reset.yml
 ```
 
-En cada host, `logout.sh` y luego `netplan apply` devuelven la interfaz de datos a su IP 10.0.0.x del LAB5.
+En cada host, `logout.sh` con su interfaz de datos (`vx-sw2`, `vx-sw3` o `ens4`) y luego `netplan apply` devuelven la interfaz de datos a su IP 10.0.0.x del LAB5.

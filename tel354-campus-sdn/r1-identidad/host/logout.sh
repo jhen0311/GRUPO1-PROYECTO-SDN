@@ -3,20 +3,25 @@
 # Cierre de sesión de red: EAPOL-Logoff (M1 cierra la sesión y retira
 # sus reglas), liberación del lease DHCP y limpieza de la interfaz.
 # Uso, dentro del host:   bash r1-identidad/host/logout.sh [interfaz] [--silencioso]
+# Sin interfaz se usa la de túnel vx-* del equipo. La de gestión (ens3) nunca se toca y, con túnel,
+# tampoco su portadora (interfaz.sh).
 # =====================================================================
 set -u
-IF="${1:-$(ip -o link show | awk -F': ' '$2 != "lo" {sub(/@.*/, "", $2); print $2; exit}')}"
-[ "$IF" = "--silencioso" ] && IF="$(ip -o link show | awk -F': ' '$2 != "lo" {sub(/@.*/, "", $2); print $2; exit}')"
+AQUI="$(cd "$(dirname "$0")" && pwd)"
+source "$AQUI/interfaz.sh"
+ARG="${1:-}"; [ "$ARG" = "--silencioso" ] && ARG=""
+IF=$(interfaz_datos "$ARG") || exit 1
+GESTION_ANTES=$(ipv4_gestion)
 SILENCIO=0; [[ " $* " == *" --silencioso "* ]] && SILENCIO=1
-RUN=/run/tel354
+RUN=$RAIZ_SIS/run/tel354
 CTRL=$RUN/wpa-ctrl
 
 if [ -f "$RUN/wpa-cli-$IF.pid" ]; then                  # acción de P8 (login.sh)
   kill "$(cat "$RUN/wpa-cli-$IF.pid")" 2>/dev/null; rm -f "$RUN/wpa-cli-$IF.pid"
 fi
-if [ -f "/run/dhclient-$IF.pid" ]; then
-  timeout 5 dhclient -r -lf "/run/dhclient-$IF.leases" -pf "/run/dhclient-$IF.pid" "$IF" >/dev/null 2>&1
-  rm -f "/run/dhclient-$IF.pid"
+if [ -f "$RAIZ_SIS/run/dhclient-$IF.pid" ]; then
+  timeout 5 dhclient -r -lf "$RAIZ_SIS/run/dhclient-$IF.leases" -pf "$RAIZ_SIS/run/dhclient-$IF.pid" "$IF" >/dev/null 2>&1
+  rm -f "$RAIZ_SIS/run/dhclient-$IF.pid"
 fi
 if [ -S "$CTRL/$IF" ]; then
   wpa_cli -p "$CTRL" -i "$IF" logoff >/dev/null 2>&1     # EAPOL-Logoff
@@ -28,6 +33,7 @@ if [ -f "$RUN/wpa-$IF.pid" ]; then
   for _ in $(seq 20); do kill -0 "$P" 2>/dev/null || break; sleep 0.1; done   # esperar a que termine
 fi
 rm -f "$RUN/wpa-$IF.pid" "$CTRL/$IF"
-ip -4 addr flush dev "$IF" 2>/dev/null
+limpiar_ipv4 "$IF"
 ip neigh flush dev "$IF" 2>/dev/null   # como al desconectar el cable: se olvida la MAC del gateway
+comprobar_gestion "$GESTION_ANTES"
 [ $SILENCIO -eq 1 ] || echo "Sesión cerrada en $IF."

@@ -277,7 +277,7 @@ Fuentes cotejadas: `AVZ07-TEL354_2026-2_G1` (LLSD de R1 y R2), `AVZ08-TEL354_202
 | 7 | Meter `ctl_P` en 525 y 505 | Reglas sin meter | M1 necesita el id del meter de cada puerto (convención o servicio de M7) |
 | 8 | Cierre por enlace caído y por 60 s sin DHCP | No existe | DeviceListener (PORT_UPDATED) y temporizador en M1 |
 | 9 | M6: `auth_log` | No existe | App M6 mínima |
-| 10 | Cookies del régimen base (0x01, 0x03, 0x04, 0x05) | `onos_static.py` instala por REST con el appId de REST | Aceptado en la maqueta; queda para M2/M7/M8 como apps |
+| 10 | Cookies del régimen base (0x01, 0x03, 0x04, 0x05) | 0x01 y 0x05: app `tel354.base` (appId `tel354.m7` y `tel354.m8`, 11/11). 0x03 y 0x04: puente REST `base_auto.py --solo-tabla1` | Falta que M2 programe la Tabla 1 (0x03 y 0x04) |
 
 ### F.5. Observaciones del Informe Parcial que debe resolver el LLSD de R3
 
@@ -327,3 +327,13 @@ Corregido con resaltado:
 - LLSD de R3: espacio en «5 s y», referencias a la cookie y a la memoria de M4a ya corregidas en los otros documentos, nota sobre la diferencia de 1 ms con la Tabla 52 del Informe.
 
 Sin pendientes documentales entre los cuatro documentos. Lo que queda es código (P1–P8, sondeo de `login.sh`) y la demo de R3 (E1–E14), cuyos resultados entrarán a la Tabla 25 y la sección 10.3 del LLSD de R3.
+
+## H. Pendientes tras validar M7 y M8 en el slice (12/11/2026)
+
+| # | Pendiente | Módulo | Efecto |
+|---|---|---|---|
+| 1 | La Tabla 1 (permisos 100 y comunes) la carga el puente REST `base_auto.py --solo-tabla1`; debe programarla M2 con su `Matriz` y `policy_changed` | M2 | Un switch nuevo no recibe su Tabla 1 sin correr el puente |
+| 2 | La configuración se registra dos veces al arrancar (carga inicial y aviso de netcfg) | M7 | Solo una línea de log repetida |
+| 3 | Tras reconectarse un switch, la línea «régimen base completo» reporta un tiempo ADDED que no mide convergencia: ONOS aún marca las reglas como ADDED | M7 | Solo la métrica del log; t_conv se mide en un switch nuevo |
+| 4 | M5 espera 2 s el estado ADDED de su meter `contencion`, que ONOS confirma cada 10 s; siempre avisa. Usar la espera de 1 s de M7 | M5 | Un aviso en el log; la contención funciona |
+| 5 | Opción A (reenvío de EAPOL en el slice): retirar los túneles VXLAN; los scripts del host pasan solos a `ens4` | Slice | Las líneas de la guía con `vx-sw2` cambian a `login.sh` sin argumento |

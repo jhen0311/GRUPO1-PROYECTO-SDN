@@ -84,10 +84,12 @@ def crear_meter(dev, unidad, rate, burst=None, dry=False):
         raise RuntimeError(f"ONOS no devolvió el id del meter: {r.status_code} {loc} {r.text}")
     return int(m.group(1))
 
-def borrar_meters(dev):
+def borrar_meters(dev, app=None):
+    """Retira los meters del switch; con app, solo los de ese appId (p. ej., org.onosproject.rest)."""
     r = requests.get(f"{ONOS}/meters/{dev}", auth=AUTH, timeout=10)
-    for mt in r.json().get("meters", []):      # en la demo todos los meters son de este script
-        requests.delete(f"{ONOS}/meters/{dev}/{mt['id']}", auth=AUTH, timeout=10)
+    for mt in r.json().get("meters", []):
+        if app is None or mt.get("appId") == app:
+            requests.delete(f"{ONOS}/meters/{dev}/{mt['id']}", auth=AUTH, timeout=10)
 
 def configurar(componente, propiedades):
     requests.post(f"{ONOS}/configuration/{componente}", auth=AUTH,
