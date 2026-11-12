@@ -9,10 +9,10 @@ Pontificia Universidad Católica del Perú · 2026-2 · **Grupo 01**
 
 <br>
 
-[![ONOS](https://img.shields.io/badge/ONOS-1.13.0-0B5394?style=for-the-badge)](https://opennetworking.org/onos/)
+[![ONOS](https://img.shields.io/badge/ONOS-2.7.0-0B5394?style=for-the-badge)](https://opennetworking.org/onos/)
 [![OpenFlow](https://img.shields.io/badge/OpenFlow-1.3-2E7D32?style=for-the-badge)](https://opennetworking.org/)
-[![Open vSwitch](https://img.shields.io/badge/Open%20vSwitch-2.13-455A64?style=for-the-badge)](https://www.openvswitch.org/)
-[![Mininet](https://img.shields.io/badge/Mininet-2.3.0-F57C00?style=for-the-badge)](http://mininet.org/)
+[![Open vSwitch](https://img.shields.io/badge/Open%20vSwitch-OVS-455A64?style=for-the-badge)](https://www.openvswitch.org/)
+[![Java](https://img.shields.io/badge/Java-11-F57C00?style=for-the-badge)](https://openjdk.org/projects/jdk/11/)
 
 </div>
 
@@ -44,22 +44,46 @@ R1 y R2 establecen quién entra a la red y a qué puede acceder. R3, R4 y R5 abo
 
 ## Cómo funciona
 
-Cuando un usuario conecta su equipo, el puerto del switch **no tiene red**. El equipo se autentica con **802.1X** y el controlador ONOS valida sus credenciales contra el servidor de autenticación, del que obtiene su **rol**. Con la sesión aceptada, el usuario recibe una IP por DHCP y ONOS instala en el switch de acceso **solo las reglas OpenFlow que su rol permite**. Al cerrar la sesión o vencer su tiempo, esas reglas se retiran y el puerto vuelve a quedar sin acceso.
+Cuando un switch se conecta, el controlador le instala por sí solo su **régimen base**: las reglas que no dependen de ningún usuario. Para sumar un pabellón basta con registrar su switch en la base de datos.
+
+Cuando un usuario conecta su equipo, el puerto **no tiene red**. El equipo se autentica con **802.1X** y ONOS valida sus credenciales contra el servidor de autenticación, del que obtiene su **rol**. Con la sesión aceptada, el usuario recibe una IP por DHCP y ONOS instala en el switch de acceso **solo las reglas OpenFlow que su rol permite**. Al cerrar la sesión o vencer su tiempo, esas reglas se retiran y el puerto vuelve a quedar sin acceso.
+
+## Módulos
+
+Cada módulo es una app propia de ONOS (bundle OSGi en Java) que usa solo la API pública del controlador. Comparten eventos y servicios a través del bundle común `tel354-api`.
+
+| Módulo | Función | Estado |
+|---|---|---|
+| **M1** · Identidad y sesiones | 802.1X, sesión por rol, relay DHCP, proxy ARP del gateway | Validado en el slice |
+| **M2** · Autorización | Matriz de permisos por rol (Tabla 1) y denegaciones | En desarrollo |
+| **M3** · Monitoreo | Contadores de las reglas vigiladas | Validado en el slice |
+| **M4a** · Detección | Ventanas de tiempo sobre el comportamiento de cada sesión | Implementado, por validar |
+| **M5** · Mitigación | Contención escalonada (N1, N2) y cuarentena (N3) | Validado en el slice |
+| **M6** · Auditoría | Registro de eventos de seguridad | Pendiente |
+| **M7 + M8** · Régimen base y caminos fijos | Reglas base de cada switch y caminos del core, al detectarlo | Validado en el slice |
 
 ## Entorno de pruebas
 
-La arquitectura se valida sobre un **slice del VNRT**, el testbed del laboratorio, que sirve como maqueta de la red de campus: un switch core, dos switches de acceso que representan dos pabellones y cuatro hosts de usuario, cada uno en su propia VM con Open vSwitch o Linux, más el controlador ONOS en una VM aparte. La misma topología se replica en **Mininet** para desarrollar y probar los módulos antes de llevarlos al slice.
+La arquitectura se valida sobre un **slice del VNRT**, el testbed del laboratorio, que sirve como maqueta de la red de campus: un switch core, dos switches de acceso que representan dos pabellones y cuatro hosts de usuario, cada uno en su propia VM con Open vSwitch o Linux. ONOS corre en Docker en la VM del controlador, junto a los servicios de identidad y direccionamiento.
+
+La red virtual del slice descarta las tramas 802.1X, así que, por ahora, el login viaja por un túnel VXLAN entre cada host y su switch de acceso. Es una medida provisional, hasta que el laboratorio habilite el reenvío de esas tramas.
+
+La primera versión se desarrolló en **Mininet** con ONOS 1.13 y sigue documentada en el repositorio.
 
 ## Tecnologías
 
 | Área | Tecnología |
 |---|---|
-| Controlador SDN | ONOS 1.13 (apps propias en Java/OSGi) |
+| Controlador SDN | ONOS 2.7.0 en Docker (apps propias en Java 11/OSGi) |
 | Plano de datos | Open vSwitch · OpenFlow 1.3 |
-| Pruebas | Slice del VNRT · Mininet 2.3 |
+| Pruebas | Slice del VNRT · Mininet 2.3 (versión inicial) |
 | Autenticación | IEEE 802.1X · EAP-TTLS · FreeRADIUS · OpenLDAP |
 | Datos y direccionamiento | PostgreSQL · ISC Kea DHCP |
 | Scripts | Python 3 · Bash |
+
+## Repositorio
+
+El código está en [`tel354-campus-sdn/`](tel354-campus-sdn/), organizado por requerimiento (`r1-identidad/`, `r2-autorizacion/`, `r3-ataques-encubiertos/`…), con lo común en `comun/`. La guía de despliegue y validación en el slice es [`docs/VALIDACION.md`](tel354-campus-sdn/docs/VALIDACION.md).
 
 <div align="center">
 <br>
