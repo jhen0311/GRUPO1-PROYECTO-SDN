@@ -1,14 +1,14 @@
 # Guía de validación de M1 y M5 en el slice del LAB5 (VNRT)
 
-**TEL354 · PUCP 2026-2 · Grupo 01 · Versión 1.8 · 13/11/2026**
+**TEL354 · PUCP 2026-2 · Grupo 01 · Versión 1.9 · 13/11/2026**
 
 Esta guía valida en el slice del LAB5 que el código de la versión 2.0 (tel354-api, M1 y M5) funciona: primero que compila contra ONOS 2.7 real, luego que las apps se activan en el controlador y, por último, que hacen su trabajo con hosts reales (802.1X, IP por rol, reglas de sesión, contención y cuarentena). Se parte del slice en su estado inicial, después de `slice_reset.yml`.
 
 El slice del LAB5 no es el piloto del LAB6, pero tiene lo necesario para validar M1 y M5: ONOS 2.7, un switch central, dos switches con dos hosts cada uno y una VM que puede hacer de todos los servidores. Lo que no se puede validar aquí es lo propio del clúster y del control in-band (prueba V9 de la Guía de M1).
 
-Desde la versión 1.4 la guía incluye la app `tel354.base` (M7 + M8), que reemplaza a `base_auto.py`: su plan de pruebas (B0 a B12) está en la sección 7 bis. La versión 1.6 protege `ens3` en los scripts del host (paso 11) y agrega las pruebas locales previas al slice (paso 12 bis). La versión 1.7 registra los resultados de la validación de M7 y M8 (sección 7 ter) y corrige los pasos 4, 16, 17 y 24. La versión 1.8 agrega el montaje manual de los túneles VXLAN (paso 11 bis) y las pruebas de M2 (Tabla 1 al detectar cada switch, que reemplaza al puente `base_auto.py --solo-tabla1`) y de M6 (auditoría en `auth_log`), en la sección 7 quater.
+Desde la versión 1.4 la guía incluye la app `tel354.base` (M7 + M8), que reemplaza a `base_auto.py`: su plan de pruebas (B0 a B12) está en la sección 7 bis. La versión 1.6 protege `ens3` en los scripts del host (paso 11) y agrega las pruebas locales previas al slice (paso 12 bis). La versión 1.7 registra los resultados de la validación de M7 y M8 (sección 7 ter) y corrige los pasos 4, 16, 17 y 24. La versión 1.8 agrega el montaje manual de los túneles VXLAN (paso 11 bis) y las pruebas de M2 (Tabla 1 al detectar cada switch, que reemplaza al puente `base_auto.py --solo-tabla1`) y de M6 (auditoría en `auth_log`), en la sección 7 quater. La versión 1.9 agrega M4a y el IDS (Suricata), en la sección 7 sexies.
 
-**Capturas.** Cada paso indica qué captura tomar (F01 a F55) para el informe de validación. Que se vean el prompt y el comando.
+**Capturas.** Cada paso indica qué captura tomar (F01 a F61) para el informe de validación. Que se vean el prompt y el comando.
 
 **Versión del código.** La guía no depende de una versión concreta del zip: el paso 1 usa `tel354-campus-sdn-vX.zip` y deja la carpeta anterior como `tel354-campus-sdn.anterior`, para que no queden archivos de versiones previas mezclados con los nuevos.
 
@@ -1136,13 +1136,107 @@ Resultado esperado: ninguna fila: ningún evento quedó dos veces con el mismo i
 
 Observaciones: al detenerse, M2 registraba un aviso por la revisión que interrumpe su propio cierre (corregido en el código: ahora es una línea de depuración); la configuración de M2 se aplica dos veces al arrancar (solo líneas de log repetidas, pendiente 11). Antes de las pruebas, una actualización automática nocturna reinició `systemd-networkd` en varias VMs y deshizo los túneles; se volvieron a montar con el paso 11 bis.
 
+## 7 sexies. Pruebas de M4a y del IDS
+
+M4a (`tel354.m4a`) cuenta, por sesión, los intentos denegados que le pasa M2 en ventanas de 10 s y 600 s, y publica `ThreatSuspected` al llegar a un umbral; M5 decide la contención. El IDS (Suricata) es un complemento pasivo: en el slice escucha la interfaz de datos de controller (`ens4`), por donde llega todo el tráfico hacia los servidores, y detecta lo que el controlador no ve porque el tráfico está autorizado (fuerza bruta contra un servicio y peticiones maliciosas). Su adaptador envía cada alerta a la REST de M4a (`POST /onos/campus-ids/v1/alertas`). No se modifican `tel354-api`, M1, M2, M3, M5, M7 ni M8: solo se instala M4a, el IDS y la versión de M6 que registra sus alertas (`IDS_ALERTA`).
+
+Antes de empezar, comprobar los túneles (paso 11 bis) y cerrar sesión en los cuatro hosts.
+
+| Prueba | Qué verifica | Paso | Captura |
+|---|---|---|---|
+| A1 | M4a compila, se activa, carga sus umbrales y su REST responde | 31 | F56 |
+| A2 | Escaneo de puertos: M2 → M4a (métrica P) → M5 (N1) | 32 | F57, F58 |
+| A3 | Suricata y el adaptador instalados; M6 actualizado | 33 | F59 |
+| A4 | Petición maliciosa: Suricata → adaptador → M4a (métrica IDS) → M5, y `IDS_ALERTA` en `auth_log` | 34 | F60, F61 |
+
+*Tabla 5 septies. Pruebas de M4a y del IDS en el slice.*
+
+### Paso 31. Instalar M4a (A1)
+
+En `root@controller:~/tel354-campus-sdn#` ejecutar:
+
+```bash
+export TEL354_ENV=una_instancia.env
+bash r3-ataques-encubiertos/instalar_r3.sh m4a 2>&1 | tee /root/mvn.log
+docker logs onos 2>&1 | grep -E "M4a|M5: suscrito" | tail -4
+curl -s -u onos:rocks -X POST -H "Content-Type: application/json" http://127.0.0.1:8181/onos/campus-ids/v1/alertas \
+  -d '{"src_ip":"10.99.0.1","dst_ip":"10.200.1.10","proto":"tcp","dst_port":443,"sid":1000004,"categoria":"Web Application Attack","firma":"prueba"}'; echo
+```
+
+Resultado esperado: `tel354.m4a instalada y activa` y `r3-netcfg.json cargada`; en el log, `M4a iniciado: W1 = 10 s, W2 = 600 s` y `M5: suscrito a ThreatSuspected (M4a)`; la REST responde `{"resultado":"SIN_SESION"}` (la IP 10.99.0.1 no tiene sesión: la alerta se descarta sin efectos). En `onos@root >`, `apps -s | grep tel354` muestra `tel354.m4a` activa.
+
+**Captura F56.**
+
+### Paso 32. Escaneo de puertos (A2)
+
+Ventana de log en `root@controller:~#`:
+
+```bash
+docker logs -f --since 1m onos 2>&1 | grep -E "M4a:|M5: incidente|M2: AuthorizationDenied"
+```
+
+En h1 ejecutar `bash r1-identidad/host/login.sh vx-sw2` (alumno01) y luego:
+
+```bash
+nmap -Pn -sS -p 1-40 --max-rate 20 10.200.1.30
+```
+
+En `root@sw2:~#` ejecutar:
+
+```bash
+ovs-ofctl -O OpenFlow13 dump-flows $(ovs-vsctl list-br | head -1) table=1 | grep -E "priority=30[0-2]"
+```
+
+En `onos@root >` ejecutar `tel354:incidentes --abiertos`.
+
+Resultado esperado: una línea `M2: AuthorizationDenied` por puerto; al décimo puerto distinto, `M4a: ThreatSuspected P=10/10 W=10s sesion N -> [10.200.1.30/6[…]]`; luego `M5: incidente I [alumno01 ESCANEO_PUERTOS Bajo/MAYOR N1, 1 sesiones]`. En sw2, una regla 300 (`drop`) desde la IP de h1 hacia `10.200.1.30`, con `hard_timeout=900`. `--max-rate 20` mantiene el escaneo por debajo del meter de captura (50 pps).
+
+**Captura F57:** h1 y el log. **F58:** el `dump-flows` y `tel354:incidentes`.
+
+Para seguir sin la contención, en `onos@root >` ejecutar `tel354:incidente-descartar I --motivo "prueba A2"` (con el id del incidente).
+
+### Paso 33. Suricata, adaptador y M6 (A3)
+
+En `root@controller:~/tel354-campus-sdn#` ejecutar:
+
+```bash
+bash r3-ataques-encubiertos/ids/instalar_ids.sh
+bash r3-ataques-encubiertos/m6-auditoria/instalar_m6.sh
+```
+
+Resultado esperado: la memoria libre; `This is Suricata version …`; `Configuration provided was successfully loaded`; `suricata` e `ids-adapter` en `active (running)`; `Interfaz: ens4 · Reglas: 3 · Destino: http://127.0.0.1:8181/onos/campus-ids/v1/alertas`. El instalador de M6 conserva `/etc/tel354/m6.env` y reinicia el servicio con la regla `IDS_ALERTA`.
+
+**Captura F59.**
+
+### Paso 34. Petición maliciosa (A4)
+
+Con la ventana de log del paso 32 abierta y h1 con sesión (alumno01), en `root@h1:~#` ejecutar:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" "http://10.200.1.10:443/buscar?q=1%20UNION%20SELECT%20usuario,clave"
+```
+
+En `root@controller:~#` ejecutar:
+
+```bash
+grep '"event_type":"alert"' /var/log/suricata/eve.json | tail -1 | python3 -m json.tool | grep -E '"(signature_id|signature|src_ip|dest_ip|dest_port)"'
+journalctl -u ids-adapter -n 3 --no-pager
+sleep 3; su postgres -c "psql -P pager=off -d campus -c \"SELECT id, evento, sesion_id, detalle->>'firma_sid' AS sid, detalle->>'tipo' AS tipo FROM auth_log ORDER BY id DESC LIMIT 5\""
+```
+
+Resultado esperado: el Campus Virtual responde con un código HTTP, `200` o `404` (la petición pasa: el IDS no bloquea); en `eve.json`, la alerta `1000004` (`TEL354 peticion maliciosa SQLi`) desde la IP de h1; en el adaptador, `OK 200 {"resultado":"ACEPTADA"} 1000004 10.17.x.y`; en el log de ONOS, `M4a: IdsAlert sid 1000004 sev 1 tipo PETICION_MALICIOSA sesion N …`, `M4a: ThreatSuspected IDS=1/1 W=60s …` y `M5: incidente I [alumno01 PETICION_MALICIOSA Fuerte/CRITICO N2 …]` (petición maliciosa es de nivel Fuerte: aislamiento N2). En `auth_log`, `IDS_ALERTA` (sid 1000004, tipo PETICION_MALICIOSA), `SOSPECHA` y `CONTENCION_APLICADA`.
+
+**Captura F60:** h1, `eve.json`, el adaptador y el log. **F61:** la consulta de `auth_log`.
+
+Al terminar, en `onos@root >` ejecutar `tel354:incidente-descartar I --motivo "prueba A4"` y, en h1, `bash r1-identidad/host/logout.sh vx-sw2`.
+
 ## 8. Qué enviar si algo falla
 
 | Nivel | Evidencia |
 |---|---|
 | 1 | `/root/mvn.log` del módulo que falló |
 | 2 | Salida de `apps -a -s`, `scr:list` y `docker logs onos 2>&1 \| grep -iE "tel354\|exception" \| tail -60` |
-| 3 | La prueba, el resultado obtenido, `docker logs onos 2>&1 \| grep -E "M1:\|M2:\|M5:\|M7\|M8" \| tail -40` y el `dump-flows` del switch; para M6, `journalctl -u m6-auditoria -n 40` |
+| 3 | La prueba, el resultado obtenido, `docker logs onos 2>&1 \| grep -E "M1:\|M2:\|M5:\|M7\|M8" \| tail -40` y el `dump-flows` del switch; para M6, `journalctl -u m6-auditoria -n 40`; para el IDS, `journalctl -u suricata -u ids-adapter -n 40` |
 
 *Tabla 6. Evidencias para corregir un fallo.*
 

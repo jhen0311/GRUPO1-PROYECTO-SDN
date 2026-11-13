@@ -1,0 +1,14 @@
+# TEL354 R3 - reglas locales del IDS (solo lo que el controlador no ve: tráfico AUTORIZADO).
+# Los sid coinciden con "ids.firmas" de r3-netcfg.json.
+# Variables (HOME_NET, HTTP_SERVERS, SSH_SERVERS): las pasa instalar_ids.sh como parámetros de arranque
+# (--set vars.address-groups...), sin editar suricata.yaml. instalar_ids.sh copia este archivo a
+# /etc/suricata/rules/tel354.rules.
+
+# 1000001: fuerza bruta contra SSH del servidor de gestión TI (solo el rol TI llega hasta ahí)
+alert tcp $EXTERNAL_NET any -> $SSH_SERVERS 22 (msg:"TEL354 fuerza bruta SSH"; flow:to_server; flags:S; detection_filter:track by_src, count 5, seconds 30; classtype:attempted-admin; sid:1000001; rev:1;)
+
+# 1000002: fuerza bruta HTTP (POST repetidos, por ejemplo hydra http-post-form) contra los recursos
+alert http $EXTERNAL_NET any -> $HTTP_SERVERS any (msg:"TEL354 fuerza bruta HTTP"; flow:established,to_server; http.method; content:"POST"; detection_filter:track by_src, count 10, seconds 30; classtype:attempted-user; sid:1000002; rev:1;)
+
+# 1000004: petición maliciosa (inyección SQL típica de sqlmap) en la URI
+alert http $EXTERNAL_NET any -> $HTTP_SERVERS any (msg:"TEL354 peticion maliciosa SQLi"; flow:established,to_server; http.uri; content:"union"; nocase; content:"select"; nocase; distance:0; classtype:web-application-attack; sid:1000004; rev:1;)

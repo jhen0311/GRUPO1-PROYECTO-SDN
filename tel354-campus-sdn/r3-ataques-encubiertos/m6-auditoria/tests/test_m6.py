@@ -45,6 +45,9 @@ CASOS = [
     ("M5: incidente 7 DESCARTADO por rest:onos vía rest (falso positivo)", "ADMIN_INCIDENTE", None, None),
     ("M5: modo OBSERVACION fijado por consola:onos vía consola", "ADMIN_INCIDENTE", None, None),
     ("M1: " + SES_A + " sin reglas en el switch: CERRADA (REINICIO)", "SESION_CERRADA", 12, "alumno.demo"),
+    ("M4a: IdsAlert sid 1000004 sev 1 tipo PETICION_MALICIOSA sesion 12 [alumno.demo ALUMNO] -> 10.200.1.20 proto 6 "
+     "puerto 443 sensor slice: TEL354 peticion maliciosa SQLi", "IDS_ALERTA", 12, "alumno.demo"),
+    ("M4a: alerta del IDS sin sesión para 10.200.1.20 (sid 1000002), no se atribuye", "IDS_ALERTA", None, None),
 ]
 
 

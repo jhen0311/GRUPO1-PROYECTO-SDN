@@ -1,0 +1,30 @@
+# REFERENCIA. instalar_ids.sh NO copia este archivo: aplica estos mismos valores como parámetros de
+# arranque de Suricata (drop-in de systemd), así no hay que fusionar YAML a mano. Sirve para la VM-IDS
+# del piloto si se prefiere editar suricata.yaml.
+# Fragmento de /etc/suricata/suricata.yaml. Solo estas secciones cambian respecto al archivo por defecto.
+# SLICE LAB5: Suricata corre en la VM controller y captura en ens4 (todo el tráfico hacia 10.200.x.y).
+# PILOTO LAB6: en VM-IDS, af-packet con eth0 (espejo CORE2) y eth1 (espejo CORE1).
+
+vars:
+  address-groups:
+    HOME_NET: "[10.0.0.0/8]"
+    EXTERNAL_NET: "any"                 # el atacante es interno; el valor por defecto (!$HOME_NET) anularía las reglas
+    HTTP_SERVERS: "[10.200.1.0/24,10.200.2.0/24]"
+    SSH_SERVERS: "[10.200.0.5]"
+
+af-packet:
+  - interface: ens4                     # piloto: eth0 y, aparte, eth1 (cluster-id distinto)
+    cluster-id: 99
+    cluster-type: cluster_flow
+
+default-rule-path: /etc/suricata/rules
+rule-files:
+  - local.rules                         # en el slice solo las locales, para no gastar memoria con ET Open
+
+outputs:
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: /var/log/suricata/eve.json
+      types:
+        - alert

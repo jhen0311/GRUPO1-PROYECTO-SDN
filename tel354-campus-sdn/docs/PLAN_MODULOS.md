@@ -10,13 +10,13 @@ TEL354 · Grupo 01 · 23/10/2026. Documento de referencia para implementar los m
 | M1 · Identidad y sesiones (con el mínimo de M8) | `tel354.m1` | R1 | **Implementado y validado** (19/10); falta la versión 1.1 | `r1-identidad/onos-app-m1/` |
 | M2 · Autorización | `tel354.m2` | R2, R3 | **Implementado y validado en el slice** (rama alejo, 12/11; ajustes del 13/11: falla cerrada de la regla 50, cambio de master y cookie 0x02 compartida): Tabla 1 proactiva al detectar cada switch, `policy_changed`, slow-path (DROP 150, AuthorizationDenied) y carrera (VALIDACION, sección 7 quinquies) | `r2-autorizacion/onos-app-m2/` |
 | M3 · Monitoreo | `tel354.m3` | R3 a R5 | **Por implementar** | `r3-ataques-encubiertos/onos-app-m3/` |
-| M4a · Detección de amenazas | `tel354.m4a` | R3, R5 | **Por implementar** | `r3-ataques-encubiertos/onos-app-m4a/` |
+| M4a · Detección de amenazas | `tel354.m4a` | R3, R5 | **Implementado** (ventanas W₁ y W₂; entrada de alertas del IDS por su REST propia `/onos/campus-ids`, rama oshin, ajustada el 13/11); falta validarlo en el slice (VALIDACION, sección 7 sexies) | `r3-ataques-encubiertos/onos-app-m4a/` |
 | M4b · Detección de anomalías | `tel354.m4b` | R4 | Por diseñar (LLSD de R4) | `r4-ddos/` |
 | M5 · Mitigación | `tel354.m5` | R3 a R5 | **Por implementar** (parte de R3) | `r3-ataques-encubiertos/onos-app-m5/` |
 | M6 · Auditoría | — (servicio Python fuera de ONOS, **provisional**: el grupo decide si pasa a ser `tel354.m6`) | Transversal | **Implementado** (rama alejo, 12/11; ajustes del 13/11: `onos_m6` solo INSERT con el disparador de `06_m6.sql`, perfil de una instancia, duplicados solo entre instancias): lee el log de ONOS y la REST de M5, y escribe en `auth_log` por lotes; validado en el slice (VALIDACION, sección 7 quinquies) | `r3-ataques-encubiertos/m6-auditoria/` |
 | M7 · Programación de flujos | `tel354.base` (appId `tel354.m7`) | Transversal | **Implementado y validado en el slice** (12/11): Tabla 0 base y meters `ctl_P` al detectar cada switch (VALIDACION, sección 7 ter) | `comun/onos-app-base/` |
 | M8 · Conectividad | `tel354.base` (appId `tel354.m8`) y M1 | R1, R2, R5 | **Implementado y validado en el slice** (12/11): Tabla 2 fija y core; el proxy ARP del gateway sigue en M1; el edge (R5) queda para su LLSD | `comun/onos-app-base/` |
-| Adaptador del IDS | script externo | R3 (complemento), R5 | Posterior | `r5-perimetral/` |
+| IDS (Suricata) y su adaptador | servicio del host (fuera de ONOS) | R3 (complemento), R5 | **Implementado** (rama oshin, 13/11): Suricata pasivo en la interfaz de datos del controlador (slice) o en la VM-IDS (piloto); `ids_adapter.py` lleva las alertas de `eve.json` a la REST de M4a; falta validarlo en el slice | `r3-ataques-encubiertos/ids/` |
 
 **Decisión vigente para M7 y M8 (10–11/11/2026).**
 
@@ -97,7 +97,8 @@ TEL354 · Grupo 01 · 23/10/2026. Documento de referencia para implementar los m
 
 ### 4.5. M4a · ventanas deslizantes
 
-- **Servicios de ONOS:** ninguno (solo `CoreService`); en una fase posterior, recurso REST para IdsAlert.
+- **Servicios de ONOS:** `CoreService` y `NetworkConfigRegistry`; recurso REST propio para IdsAlert (`POST /onos/campus-ids/v1/alertas`, hecho el 13/11).
+- **Alertas del IDS:** traduce firma o categoría de Suricata a tipo de ataque (`ids.firmas`, `ids.categorias` en `r3-netcfg.json`), atribuye la alerta a la sesión de la IP de origen y publica una sospecha con métrica `IDS` (ventana `ids.ventanaSeg`, 60 s). Escribe `M4a: IdsAlert …` en el log, que M6 registra como `IDS_ALERTA`.
 - **Consume:** AuthorizationDenied (M2), BindingViolation y ArpProbe (M1), SessionClosed (M1).
 - **Estructuras en memoria:** `destinos[s]`, `puertos[s][d]`, `eventos[s]`, `origenes[d]`, cada elemento con su última marca de tiempo; purga perezosa y limpieza cada 60 s. Topes: 24 destinos, 30 puertos por destino, 30 eventos, θ_F orígenes.
 - **Métricas:** P, D en W₁ = 10 s y W₂ = 600 s; N y F en W₂. Umbrales 10/30, 8/24, —/30, —/5 (3 en la maqueta), por network config.
@@ -165,6 +166,6 @@ bundle:list | grep tel354
 ## 8. Fuera de esta etapa
 
 - M4b y las partes de M5 para R4 (limitación 910 y 120) y R5 (bloqueos del edge): según sus LLSD.
-- Adaptador del IDS Suricata (`eve.json` → API REST de M4a): posterior.
+- Adaptador del IDS Suricata (`eve.json` → API REST de M4a): implementado el 13/11 (`r3-ataques-encubiertos/ids/`).
 - Edge de R5 en M8: según el LLSD de R5.
 - Clúster de ONOS: las ventanas de M4a viven en memoria de una instancia (LLSD, sección 11).

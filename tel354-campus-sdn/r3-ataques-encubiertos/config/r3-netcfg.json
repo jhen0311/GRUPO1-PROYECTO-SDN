@@ -3,7 +3,21 @@
     "tel354.m4a": {
       "r3": {
         "w1": 10, "w2": 600,
-        "umbrales": {"P1": 10, "D1": 8, "P2": 30, "D2": 24, "N2": 30, "F2": 3}
+        "umbrales": {"P1": 10, "D1": 8, "P2": 30, "D2": 24, "N2": 30, "F2": 3},
+        "ids": {
+          "ventanaSeg": 60,
+          "firmas": {
+            "1000001": "FUERZA_BRUTA_SERVICIO",
+            "1000002": "FUERZA_BRUTA_SERVICIO",
+            "1000004": "PETICION_MALICIOSA"
+          },
+          "categorias": {
+            "Attempted Administrator Privilege Gain": "FUERZA_BRUTA_SERVICIO",
+            "Attempted User Privilege Gain": "FUERZA_BRUTA_SERVICIO",
+            "Web Application Attack": "PETICION_MALICIOSA",
+            "A Network Trojan was detected": "FIRMA_MALICIOSA"
+          }
+        }
       }
     },
     "tel354.m5": {

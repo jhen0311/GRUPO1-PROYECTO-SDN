@@ -94,6 +94,14 @@ REGLAS = [
             r"-> (?P<dest>.*?)(?P<ineq> inequívoca)?$",
      lambda m: [_ev("SOSPECHA", m["sid"], metrica=m["met"], valor=float(m["val"]), umbral=float(m["umb"]),
                     ventana_s=int(m["w"]), destinos=m["dest"], inequivoca=bool(m["ineq"]))]),
+    # --- R3 (M4a): alertas del IDS (Suricata) que llegan por la REST de M4a (LLSD R3, Tabla 9: IdsAlert)
+    ("M4a", r"^IdsAlert sid (?P<sid>\d+) sev (?P<sev>\d+) tipo (?P<tipo>\w+) sesion (?P<ses>\d+) \[(?P<u>\S+) (?P<rol>\S+)\] "
+            r"-> (?P<dst>\S+) proto (?P<proto>\d+) puerto (?P<pto>\d+) sensor (?P<sensor>\S+): (?P<firma>.*)$",
+     lambda m: [_ev("IDS_ALERTA", m["ses"], m["u"], firma_sid=int(m["sid"]), severidad=int(m["sev"]), tipo=m["tipo"],
+                    rol=m["rol"], ip_dst=m["dst"], proto=int(m["proto"]), puerto=int(m["pto"]) or None,
+                    sensor=m["sensor"], firma=m["firma"])]),
+    ("M4a", r"^alerta del IDS sin sesión para (?P<src>\S+) \(sid (?P<sid>\d+)\), no se atribuye",
+     lambda m: [_ev("IDS_ALERTA", ip_origen=m["src"], firma_sid=int(m["sid"]), motivo="SIN_SESION")]),
     # --- R3 (M5): incidentes, contención y operaciones de TI
     ("M5", r"^" + INC + r" (?P<res>.*?) -> (?P<obj>.*) \(sospecha (?P<sosp>.*); modo (?P<modo>\w+)\)$",
      lambda m: _contencion(m)),

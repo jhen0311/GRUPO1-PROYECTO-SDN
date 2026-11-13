@@ -184,7 +184,7 @@ tel354-api exporta las interfaces de la Tabla 8. Cada app registra su implementa
 | CounterDelta | M3 | M5 | Lectura con aumento del contador de una regla vigilada | flowId, dpid, Δpaquetes, intervalo |
 | ContainmentApplied / ContainmentLifted | M5 | M1, M6 | Cambio de nivel N0–N2 o cierre del incidente | incidente, sesiones, nivel, expira_en |
 | QuarantineConfirmed | M5 | M1, M6 | Sanción insertada en cuarentena | incidente, usuario, fin de la sanción |
-| IdsAlert (posterior) | API REST | M4a, M6 | Alerta de Suricata | firma, prioridad, origen, destino, puerto |
+| IdsAlert | API REST de M4a (`POST /onos/campus-ids/v1/alertas`) | M4a, M6 | Alerta de Suricata | firma, prioridad, origen, destino, puerto |
 
 *Tabla 9. Eventos que intervienen en R3*
 
@@ -464,7 +464,7 @@ ArpProbe no se registra uno por uno, porque un barrido produciría una fila por 
 
 TI consulta y resuelve los incidentes con IncidentAdminService, por dos vías que ejecutan el mismo código (R3-D10).
 
-**API REST.** Es la interfaz formal: la usan herramientas de TI (un SIEM, un tablero o scripts) y es el punto de entrada de las alertas del IDS. M5 la publica como recurso web de ONOS (AbstractWebResource, contexto `/onos/campus`), con la autenticación de la API de ONOS.
+**API REST.** Es la interfaz formal: la usan herramientas de TI (un SIEM, un tablero o scripts) y M5 la publica como recurso web de ONOS (AbstractWebResource, contexto `/onos/campus`), con la autenticación de la API de ONOS. [Las alertas del IDS entran por un recurso web propio de M4a (contexto `/onos/campus-ids`, misma autenticación), para no modificar M5 ni `tel354-api` (13/11/2026).]{.mark}
 
 > GET /onos/campus/v1/incidentes?estado=EN_INVESTIGACION # incidentes abiertos
 >

@@ -25,6 +25,8 @@ Los nombres de la LLSD de R3 (Tabla 17) más los de sesión de R1, que el README
 | `M1: incidente I: k sesiones del usuario U pasan a cuarentena` | `CUARENTENA_APLICADA` | usuario_id |
 | `M2: AuthorizationDenied sesion N ... -> ip proto P puerto X` | `AUTORIZACION_DENEGADA` | sesion_id; ip_dst, proto, puerto, dpid |
 | `M4a: ThreatSuspected M=v/u W=Ns sesion N -> ...` | `SOSPECHA` | sesion_id; métrica, valor, umbral, ventana |
+| `M4a: IdsAlert sid S sev V tipo T sesion N [...] -> ip proto P puerto X sensor Z: firma` | `IDS_ALERTA` | sesion_id; firma_sid, severidad, tipo, ip_dst, puerto, firma |
+| `M4a: alerta del IDS sin sesión para IP (sid S)` | `IDS_ALERTA` | ip_origen, firma_sid, motivo SIN_SESION |
 | `M5: incidente I [...] ... -> N1\|N2 ...` / `sube de A a B` | `CONTENCION_APLICADA` | incidente_id, nivel |
 | `M5: incidente I [...] venció sin renovación` | `CONTENCION_RETIRADA` | motivo VENCIMIENTO |
 | `M5: incidente I CONFIRMADO por ... : cuarentena de u hasta T` | `CUARENTENA` + `ADMIN_INCIDENTE` | fin, solicitante, vía |

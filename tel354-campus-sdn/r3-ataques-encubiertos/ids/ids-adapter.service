@@ -1,0 +1,12 @@
+[Unit]
+Description=TEL354 R3 - Adaptador Suricata -> M4a (eve.json -> REST /onos/campus-ids)
+After=suricata.service network-online.target
+
+[Service]
+# instalar_ids.sh agrega un drop-in con ONOS_URLS y SENSORES según el perfil (TEL354_ENV)
+ExecStart=/usr/bin/python3 /opt/tel354/ids_adapter.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
