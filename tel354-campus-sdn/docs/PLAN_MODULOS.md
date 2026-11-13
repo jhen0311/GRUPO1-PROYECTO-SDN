@@ -8,12 +8,12 @@ TEL354 · Grupo 01 · 23/10/2026. Documento de referencia para implementar los m
 |---|---|---|---|---|
 | tel354-api | bundle común | R3 a R5 | **Por implementar** (primero) | `comun/tel354-api/` |
 | M1 · Identidad y sesiones (con el mínimo de M8) | `tel354.m1` | R1 | **Implementado y validado** (19/10); falta la versión 1.1 | `r1-identidad/onos-app-m1/` |
-| M2 · Autorización | `tel354.m2` | R2, R3 | Parte proactiva en `onos_static.py`; **falta la app** (slow-path y, según la propuesta del 26/10, la Tabla 1 proactiva) | `r2-autorizacion/onos-app-m2/` |
+| M2 · Autorización | `tel354.m2` | R2, R3 | **Implementado en la rama alejo** (12/11): Tabla 1 proactiva al detectar cada switch, `policy_changed`, slow-path (DROP 150, AuthorizationDenied) y carrera; compila contra el código de ONOS 2.7.0; falta validarlo en el slice | `r2-autorizacion/onos-app-m2/` |
 | M3 · Monitoreo | `tel354.m3` | R3 a R5 | **Por implementar** | `r3-ataques-encubiertos/onos-app-m3/` |
 | M4a · Detección de amenazas | `tel354.m4a` | R3, R5 | **Por implementar** | `r3-ataques-encubiertos/onos-app-m4a/` |
 | M4b · Detección de anomalías | `tel354.m4b` | R4 | Por diseñar (LLSD de R4) | `r4-ddos/` |
 | M5 · Mitigación | `tel354.m5` | R3 a R5 | **Por implementar** (parte de R3) | `r3-ataques-encubiertos/onos-app-m5/` |
-| M6 · Auditoría | `tel354.m6` | Transversal | **Por implementar** | `r3-ataques-encubiertos/onos-app-m6/` |
+| M6 · Auditoría | — (servicio Python, fuera de ONOS) | Transversal | **Implementado en la rama alejo** (12/11): lee el log de onos-1..3 y la REST de M5, y escribe en `auth_log` por lotes; probado con PostgreSQL 16 y el esquema real; falta validarlo en el slice | `r3-ataques-encubiertos/m6-auditoria/` |
 | M7 · Programación de flujos | `tel354.base` (appId `tel354.m7`) | Transversal | **Implementado y validado en el slice** (12/11): Tabla 0 base y meters `ctl_P` al detectar cada switch (VALIDACION, sección 7 ter) | `comun/onos-app-base/` |
 | M8 · Conectividad | `tel354.base` (appId `tel354.m8`) y M1 | R1, R2, R5 | **Implementado y validado en el slice** (12/11): Tabla 2 fija y core; el proxy ARP del gateway sigue en M1; el edge (R5) queda para su LLSD | `comun/onos-app-base/` |
 | Adaptador del IDS | script externo | R3 (complemento), R5 | Posterior | `r5-perimetral/` |

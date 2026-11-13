@@ -4,6 +4,7 @@ R2 es proactivo: la matriz de autorización por rol (`v_permiso_efectivo`) se in
 
 | Archivo | Función |
 |---|---|
+| `onos-app-m2/` | **M2 como app de ONOS 2.7.0** (`tel354.m2`): Tabla 1 al detectar cada switch de acceso, recálculo con `policy_changed` y slow-path de la regla 55 (DROP 150 y AuthorizationDenied). Ver su README. |
 | `proactivo/onos_static.py` | Régimen proactivo por la API REST de ONOS (maqueta de Mininet): core, Tablas 0, 1 y 2 de acceso y meters. |
 | `proactivo/base_auto.py` | Lo mismo en el slice. Desde la app `tel354.base` (M7 + M8) queda para diagnóstico (`--dry-run`) y como puente de la Tabla 1 hasta M2 (`--solo-tabla1`). |
 | `tests/export_matriz.py` | Exporta la matriz a `/tmp/matriz.json` (los hosts no leen la BD) |
@@ -20,4 +21,4 @@ python3 r2-autorizacion/tests/bateria_r2.py --usuario alumno.demo
 
 `--usuario` solo indica qué resultado se espera. Las reglas que deciden son las de la sesión real del host: si se declara otro usuario, la batería muestra fallas, porque el control está en el plano de datos.
 
-Pendiente: M2 como app de ONOS (DROP 150 en el slow-path de la regla 55 y recálculo con `policy_changed`).
+M2 como app de ONOS: `onos-app-m2/` (instalar con `bash r2-autorizacion/onos-app-m2/instalar_m2.sh --migrar`, que retira el puente `--solo-tabla1`). Falta validarla en el slice (pruebas M2-2 a M2-8 de su README).

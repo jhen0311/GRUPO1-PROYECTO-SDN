@@ -19,7 +19,7 @@ sleep 2
 su postgres -c "psql -qc 'DROP DATABASE IF EXISTS ${PG_DB}'"
 su postgres -c "psql -qc 'CREATE DATABASE ${PG_DB} ENCODING UTF8 LC_COLLATE \"C\" LC_CTYPE \"C\" TEMPLATE template0'"
 # 05_usuarios_piloto.sql: N cuentas por rol (python3 comun/db/gen_usuarios.py)
-for f in 01_schema.sql 02_roles.sql 03_seed_demo.sql 04_invitado.sql $(ls 05_usuarios_piloto.sql 2>/dev/null); do
+for f in 01_schema.sql 02_roles.sql 03_seed_demo.sql 04_invitado.sql $(ls 05_usuarios_piloto.sql 06_m6.sql 2>/dev/null); do
   # El archivo lo lee root y lo pasa por stdin: el usuario postgres no puede entrar a /root
   su postgres -c "psql -q -v ON_ERROR_STOP=1 -d ${PG_DB}" < "$f"
 done

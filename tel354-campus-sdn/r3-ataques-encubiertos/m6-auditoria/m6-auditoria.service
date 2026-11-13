@@ -1,0 +1,17 @@
+[Unit]
+Description=TEL354 M6 - Auditoria (auth_log) fuera de ONOS
+Documentation=file:///opt/tel354/m6-auditoria/README.md
+After=docker.service network-online.target
+Wants=docker.service network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/tel354/m6-auditoria/m6_colector.py --config /etc/tel354/m6.env
+Restart=always
+RestartSec=5
+# Lee docker logs: corre como root, igual que comun/cluster/cluster.sh
+User=root
+StateDirectory=tel354
+
+[Install]
+WantedBy=multi-user.target
