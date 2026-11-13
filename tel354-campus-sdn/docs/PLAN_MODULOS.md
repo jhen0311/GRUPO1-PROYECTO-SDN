@@ -8,12 +8,12 @@ TEL354 · Grupo 01 · 23/10/2026. Documento de referencia para implementar los m
 |---|---|---|---|---|
 | tel354-api | bundle común | R3 a R5 | **Por implementar** (primero) | `comun/tel354-api/` |
 | M1 · Identidad y sesiones (con el mínimo de M8) | `tel354.m1` | R1 | **Implementado y validado** (19/10); falta la versión 1.1 | `r1-identidad/onos-app-m1/` |
-| M2 · Autorización | `tel354.m2` | R2, R3 | Parte proactiva en `onos_static.py`; **falta la app** (slow-path y, según la propuesta del 26/10, la Tabla 1 proactiva) | `r2-autorizacion/onos-app-m2/` |
+| M2 · Autorización | `tel354.m2` | R2, R3 | **Implementado y validado en el slice** (rama alejo, 12/11; ajustes del 13/11: falla cerrada de la regla 50, cambio de master y cookie 0x02 compartida): Tabla 1 proactiva al detectar cada switch, `policy_changed`, slow-path (DROP 150, AuthorizationDenied) y carrera (VALIDACION, sección 7 quinquies) | `r2-autorizacion/onos-app-m2/` |
 | M3 · Monitoreo | `tel354.m3` | R3 a R5 | **Por implementar** | `r3-ataques-encubiertos/onos-app-m3/` |
 | M4a · Detección de amenazas | `tel354.m4a` | R3, R5 | **Por implementar** | `r3-ataques-encubiertos/onos-app-m4a/` |
 | M4b · Detección de anomalías | `tel354.m4b` | R4 | Por diseñar (LLSD de R4) | `r4-ddos/` |
 | M5 · Mitigación | `tel354.m5` | R3 a R5 | **Por implementar** (parte de R3) | `r3-ataques-encubiertos/onos-app-m5/` |
-| M6 · Auditoría | `tel354.m6` | Transversal | **Por implementar** | `r3-ataques-encubiertos/onos-app-m6/` |
+| M6 · Auditoría | — (servicio Python fuera de ONOS, **provisional**: el grupo decide si pasa a ser `tel354.m6`) | Transversal | **Implementado** (rama alejo, 12/11; ajustes del 13/11: `onos_m6` solo INSERT con el disparador de `06_m6.sql`, perfil de una instancia, duplicados solo entre instancias): lee el log de ONOS y la REST de M5, y escribe en `auth_log` por lotes; validado en el slice (VALIDACION, sección 7 quinquies) | `r3-ataques-encubiertos/m6-auditoria/` |
 | M7 · Programación de flujos | `tel354.base` (appId `tel354.m7`) | Transversal | **Implementado y validado en el slice** (12/11): Tabla 0 base y meters `ctl_P` al detectar cada switch (VALIDACION, sección 7 ter) | `comun/onos-app-base/` |
 | M8 · Conectividad | `tel354.base` (appId `tel354.m8`) y M1 | R1, R2, R5 | **Implementado y validado en el slice** (12/11): Tabla 2 fija y core; el proxy ARP del gateway sigue en M1; el edge (R5) queda para su LLSD | `comun/onos-app-base/` |
 | Adaptador del IDS | script externo | R3 (complemento), R5 | Posterior | `r5-perimetral/` |
@@ -22,18 +22,18 @@ TEL354 · Grupo 01 · 23/10/2026. Documento de referencia para implementar los m
 
 1. M7 y M8 forman una sola app, `tel354.base`, con un appId por módulo: `tel354.m7` (cookie 0x01: 900, 800, 600, 10 y los meters `ctl_P`) y `tel354.m8` (cookie 0x05: Tabla 2 fija y core). La app instala el régimen al detectar cada switch (`DeviceListener` y `LinkListener`) y lo concilia de forma idempotente cada 30 s. `base_auto.py` queda para diagnóstico (`--dry-run`).
 2. El rol de cada switch de acceso sale de `switch_acceso` (rol de BD `onos_m7`, solo SELECT). El core y la ruta a los servidores salen de la network config (`gen_base_netcfg.py`, desde el perfil). Sumar un pabellón es una fila: O(1) pasos manuales.
-3. La Tabla 1 (permisos 100 y comunes 60, 58, 57, 55, 50, 0, con los meters `captura` y `cuarentena`) es de **M2**, como dice el LLSD (Tabla 7). Hasta que M2 la programe, se carga con el puente `base_auto.py --solo-tabla1` (appId `tel354.tabla1`).
+3. La Tabla 1 (permisos 100 y comunes 60, 58, 57, 55, 50, 0, con los meters `captura` y `cuarentena`) es de **M2**, como dice el LLSD (Tabla 7), y desde el 13/11 la programa la app `tel354.m2` al detectar cada switch de acceso. El puente `base_auto.py --solo-tabla1` (appId `tel354.tabla1`) queda para diagnóstico; `instalar_m2.sh --migrar` lo retira.
 4. El proxy ARP del gateway virtual (regla 800) se implementa en M1 y no en M8, porque cada respuesta depende del estado de sesión (binding IP–MAC–puerto y rol) que M1 mantiene, y sus eventos (`ArpProbe`, `BindingViolation`) forman parte de `SessionEvent`. M8 conserva la conectividad que no depende de la identidad: caminos fijos de la Tabla 2, core y edge. La carga de ARP hacia el controlador queda acotada por el meter de la regla 800.
-5. Orden de instalación: `api → base → m1 → m3 → m5` (para retirar, al revés). M1 declara `tel354.base` en `onos.app.requires`, de modo que ONOS impone ese orden.
+5. Orden de instalación: `api → base → m1 → m2 → m3 → m5` (para retirar, al revés). M1 declara `tel354.base` en `onos.app.requires`, y M2 declara `tel354.base` y `tel354.m1`, de modo que ONOS impone ese orden. M6, mientras sea un servicio del host, se instala aparte (`instalar_m6.sh`).
 
 **Propuesta del 26/10 (aplicada el 11/11 en M7 y M8; falta la Tabla 1 en M2).** Para que todo el plano de control sea dinámico, reemplazar `onos_static.py` por dos apps: **M2** asume la Tabla 1 proactiva (reglas 100 y comunes) y la recalcula con `policy_changed`, y una app **M7/M8** instala el régimen base y los caminos fijos cuando ONOS detecta cada switch (`DeviceListener`), con el appId y la cookie de su módulo. `onos_static.py` quedaría solo para diagnóstico. Las reglas siguen siendo proactivas (su número no depende de los usuarios); lo que cambia es que las gestiona el controlador.
 
 ## 2. Acuerdos comunes a todos los módulos
 
-1. **Sin tocar ONOS.** Cada módulo es una app propia (bundle OSGi empaquetado como `.oar`) que corre dentro de Karaf. Solo se usa la API pública de ONOS (`org.onosproject.net.*`, `core`, `cfg`, `store.service`); nada de clases `*.impl` ni almacenes internos. Los ajustes del controlador van por `cfg set`.
+1. **Sin tocar ONOS.** Cada módulo es una app propia (bundle OSGi empaquetado como `.oar`) que corre dentro de Karaf. Excepción provisional (13/11): M6 corre como servicio Python en el host del controlador, hasta que el grupo decida si pasa a ser una app. Solo se usa la API pública de ONOS (`org.onosproject.net.*`, `core`, `cfg`, `store.service`); nada de clases `*.impl` ni almacenes internos. Los ajustes del controlador van por `cfg set`.
 2. **Servicios por inyección.** Los servicios de ONOS y los de nuestros módulos se obtienen con `@Reference`; cada módulo publica los suyos con `@Service`.
 3. **Contrato en `tel354-api`.** Los eventos propios extienden `AbstractEvent` y cada servicio expone `addListener` con una implementación sobre `AbstractListenerManager`. Ningún módulo importa clases internas de otro: solo las de `tel354-api`.
-4. **Cookie.** `appId (63–48) | tipo (47–40) | id (39–8) | índice (7–0)`. Tipos: 0x02 sesión (M1; DROP 150 con el appId de M2), 0x06 contención (M5), 0x07 mitigación (M5, R4). Se retiran reglas por cookie con `getFlowEntriesById(appId)`.
+4. **Cookie.** `appId (63–48) | tipo (47–40) | id (39–8) | índice (7–0)`. Tipos: 0x02 sesión (M1; con el appId de M2, índices 0–127 para el DROP 150 y 128–255 para las 110 de carrera), 0x06 contención (M5), 0x07 mitigación (M5, R4). Se retiran reglas por cookie con `getFlowEntriesById(appId)`.
 5. **Hilos.** Los listeners de ONOS no se bloquean: cada app atiende sus eventos en un ejecutor propio de un solo hilo (como M1). JDBC y Flow-Mod nunca en el hilo de eventos de ONOS.
 6. **Configuración.** Parámetros en network config con la clave del appId (`tel354.m4a`, `tel354.m5`…), cargados por el script de instalación. Cambiar un umbral no exige recompilar.
 7. **Base de datos.** Un rol por módulo con permisos mínimos y conexión TLS (`hostssl`, `sslmode=verify-ca`): `onos_m1`, `onos_m2`, `onos_m5` (nuevo), `onos_m6`. M3 y M4a no usan la base de datos.
@@ -85,7 +85,8 @@ TEL354 · Grupo 01 · 23/10/2026. Documento de referencia para implementar los m
 - **Lógica:** sesión válida → si la matriz permite el acceso, reinstala el permiso y hace Packet-Out (carrera con un cambio de política); si no, instala DROP 150 (cuádrupla, hard = 8 s, cookie M2 | 0x02 | sesion.id | contador) y publica AuthorizationDenied.
 - **Ciclo de vida:** con SessionClosed retira por cookie los DROP 150 de esa sesión.
 - **Implementa:** `AuthorizationService`.
-- **Fase posterior (opcional):** asumir la parte proactiva de `onos_static.py` (reglas 100 y Tabla 1 común) y atender `policy_changed`.
+- **Tabla 1 proactiva (hecho, 13/11):** reglas 100 y comunes al detectar cada switch de acceso, con `policy_changed`. Falla cerrada: la 50 (salida) solo se instala cuando las 55 y la 57 ya están en el switch.
+- **Carrera por curso:** si la matriz permite el acceso por una inscripción posterior al inicio de la sesión, M2 instala una 110 con su cookie (0x02, índices 128–255) en lugar de denegar; se retira con la sesión o si la inscripción desaparece.
 
 ### 4.4. M3 · lectura de contadores
 
@@ -118,6 +119,7 @@ TEL354 · Grupo 01 · 23/10/2026. Documento de referencia para implementar los m
 - **Servicios de ONOS:** solo `CoreService`.
 - **Consume:** todos los eventos de R3 y las operaciones de `IncidentAdminService`.
 - **Lógica:** inserta en `auth_log` (rol `onos_m6`, solo INSERT) en lotes cada 1 s o cada 100 filas, desde su propio ejecutor; si la base de datos falla, retiene hasta 10 000 filas.
+- **Implementación provisional (13/11):** servicio Python fuera de ONOS (`r3-ataques-encubiertos/m6-auditoria/`) que lee el log de las instancias (marcas del acuerdo 9) y la REST de M5. Mantiene el rol `onos_m6` con solo INSERT: `usuario_id` y `dispositivo_id` los completa el disparador `auth_log_referencias` de `comun/db/06_m6.sql`.
 
 ## 5. Estructura prevista del repositorio
 

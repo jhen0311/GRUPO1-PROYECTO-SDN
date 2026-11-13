@@ -1,14 +1,16 @@
 # Guía de validación de M1 y M5 en el slice del LAB5 (VNRT)
 
-**TEL354 · PUCP 2026-2 · Grupo 01 · Versión 1.7 · 12/11/2026**
+**TEL354 · PUCP 2026-2 · Grupo 01 · Versión 1.8 · 13/11/2026**
 
 Esta guía valida en el slice del LAB5 que el código de la versión 2.0 (tel354-api, M1 y M5) funciona: primero que compila contra ONOS 2.7 real, luego que las apps se activan en el controlador y, por último, que hacen su trabajo con hosts reales (802.1X, IP por rol, reglas de sesión, contención y cuarentena). Se parte del slice en su estado inicial, después de `slice_reset.yml`.
 
 El slice del LAB5 no es el piloto del LAB6, pero tiene lo necesario para validar M1 y M5: ONOS 2.7, un switch central, dos switches con dos hosts cada uno y una VM que puede hacer de todos los servidores. Lo que no se puede validar aquí es lo propio del clúster y del control in-band (prueba V9 de la Guía de M1).
 
-Desde la versión 1.4 la guía incluye la app `tel354.base` (M7 + M8), que reemplaza a `base_auto.py`: su plan de pruebas (B0 a B12) está en la sección 7 bis. La versión 1.6 protege `ens3` en los scripts del host (paso 11) y agrega las pruebas locales previas al slice (paso 12 bis). La versión 1.7 registra los resultados de la validación de M7 y M8 (sección 7 ter) y corrige los pasos 4, 16, 17 y 24.
+Desde la versión 1.4 la guía incluye la app `tel354.base` (M7 + M8), que reemplaza a `base_auto.py`: su plan de pruebas (B0 a B12) está en la sección 7 bis. La versión 1.6 protege `ens3` en los scripts del host (paso 11) y agrega las pruebas locales previas al slice (paso 12 bis). La versión 1.7 registra los resultados de la validación de M7 y M8 (sección 7 ter) y corrige los pasos 4, 16, 17 y 24. La versión 1.8 agrega el montaje manual de los túneles VXLAN (paso 11 bis) y las pruebas de M2 (Tabla 1 al detectar cada switch, que reemplaza al puente `base_auto.py --solo-tabla1`) y de M6 (auditoría en `auth_log`), en la sección 7 quater.
 
-**Capturas.** Cada paso indica qué captura tomar (F01 a F47 bis) para el informe de validación. Que se vean el prompt y el comando.
+**Capturas.** Cada paso indica qué captura tomar (F01 a F55) para el informe de validación. Que se vean el prompt y el comando.
+
+**Versión del código.** La guía no depende de una versión concreta del zip: el paso 1 usa `tel354-campus-sdn-vX.zip` y deja la carpeta anterior como `tel354-campus-sdn.anterior`, para que no queden archivos de versiones previas mezclados con los nuevos.
 
 **Cómo leer los comandos.** Antes de cada bloque se indica la VM y el prompt. Los bloques contienen solo comandos y van sin `sudo`: en cada VM se entra con `ubuntu`/`ubuntu` y se pasa a root con `sudo -i`. En la consola de ONOS el prompt es `onos@root >`.
 
@@ -41,10 +43,12 @@ Los scripts no conocen el laboratorio: todo lo que cambia frente al piloto está
 
 ### Paso 1. Repositorio en controller
 
+`tel354-campus-sdn-vX.zip` es el zip de la versión que se va a validar: reemplazar `vX` por la del archivo recibido (por ejemplo, `v5`).
+
 En la terminal de tu equipo ejecutar (5800 es el puerto de controller en el gateway del slice; `<IP_GATEWAY>` es la del LAB5):
 
 ```bash
-scp -P 5800 tel354-campus-sdn-v2.zip ubuntu@<IP_GATEWAY>:
+scp -P 5800 tel354-campus-sdn-vX.zip ubuntu@<IP_GATEWAY>:
 ssh -p 5800 ubuntu@<IP_GATEWAY>
 ```
 
@@ -57,7 +61,9 @@ sudo -i
 En `root@controller:~#` ejecutar:
 
 ```bash
-mv /home/ubuntu/tel354-campus-sdn-v2.zip /root/ && cd /root && unzip -q -o tel354-campus-sdn-v2.zip
+mv /home/ubuntu/tel354-campus-sdn-vX.zip /root/ && cd /root
+rm -rf tel354-campus-sdn.anterior; [ -d tel354-campus-sdn ] && mv tel354-campus-sdn tel354-campus-sdn.anterior
+unzip -q tel354-campus-sdn-vX.zip
 cd tel354-campus-sdn && ls
 grep -E "sw[123]" /root/TEL354_LAB5_2026_2/ansible/inventory.ini
 ```
@@ -351,7 +357,7 @@ Resultado esperado: el `ca.pem` y `ens4` en UP, sin IPv4.
 
 **ens3 no se toca.** `ens3` es la interfaz de gestión de cada VM (SSH) y ningún script del proyecto la limpia, la configura ni hace 802.1X o DHCP sobre ella. `login.sh`, `logout.sh` y `wpa_accion.sh` tienen cinco barreras: no la eligen por defecto, la rechazan si se indica, el único punto que borra direcciones también la rechaza, el hook de dhclient impide que el lease de la interfaz de datos reemplace la ruta por defecto de gestión, y cada script compara la IPv4 de `ens3` al empezar y al terminar y avisa si cambió. `servicios_coubicados.sh` y `ovs_switch.sh` también la rechazan.
 
-**Interfaz de la sesión.** A `login.sh` y `logout.sh` se les pasa la interfaz de datos: con el túnel VXLAN, `vx-sw2` en h1 y h2 y `vx-sw3` en h3 y h4 (`ens4` queda como portadora del túnel y también se rechaza); sin túnel, `ens4`. Sin argumento eligen la interfaz de túnel del host. Esta guía aún no incluye los comandos para montar el túnel: su resultado está en el documento de validación (pestaña «Preparación y M1», captura F12).
+**Interfaz de la sesión.** A `login.sh` y `logout.sh` se les pasa la interfaz de datos: con el túnel VXLAN, `vx-sw2` en h1 y h2 y `vx-sw3` en h3 y h4 (`ens4` queda como portadora del túnel y también se rechaza); sin túnel, `ens4`. Sin argumento eligen la interfaz de túnel del host. Los comandos para montar el túnel están en el paso 11 bis.
 
 **Si un host pierde su IP de gestión** (PuTTY da «Connection timed out» y `ip -br addr` muestra `ens3` sin IPv4), se recupera desde la consola del VNRT. En `root@h2:~#` ejecutar:
 
@@ -361,6 +367,91 @@ ip -br addr show ens3
 ```
 
 Si `ens3` sigue sin IPv4, ejecutar `dhclient -v ens3`. No usar `netplan apply` ni reiniciar la VM: pueden deshacer la configuración del túnel en `ens4`.
+
+### Paso 11 bis. Túneles VXLAN host ↔ switch (provisionales hasta la opción A)
+
+La red virtual del slice descarta las tramas a las direcciones de grupo reservadas, entre ellas las de 802.1X (01:80:c2:00:00:03). Mientras el laboratorio no habilite su reenvío (opción A), cada host llega a su switch de acceso por un túnel VXLAN sobre el enlace de datos: el host manda sus tramas por `vx-swX` y el switch las recibe por el puerto `vx-hN` de su bridge. Las tramas 802.1X viajan intactas dentro del túnel.
+
+Los túneles se configuran a mano y **no son persistentes**: se vuelven a montar antes de cada validación. La configuración por defecto del LAB5 (netplan) los deshace cuando se reinicia `systemd-networkd` (por ejemplo, con una actualización automática nocturna) o cuando se ejecuta `networkctl reconfigure` sobre `ens4`, `ens5` o `ens6`: en los hosts, `ens4` vuelve a 10.0.0.N/24; en los switches, `ens5` y `ens6` pierden su IP y vuelven al bridge, y los puertos `vx-h*` pueden desaparecer.
+
+| Switch | Interfaz | IP | Puerto del túnel | VNI | Puerto OpenFlow | Host | IP en `ens4` | Interfaz del host |
+|---|---|---|---|---|---|---|---|---|
+| sw2 | ens5 | 172.31.21.2/30 | vx-h1 | 1001 | 2 | h1 | 172.31.21.1/30 | vx-sw2 |
+| sw2 | ens6 | 172.31.22.2/30 | vx-h2 | 1002 | 3 | h2 | 172.31.22.1/30 | vx-sw2 |
+| sw3 | ens5 | 172.31.23.2/30 | vx-h3 | 1003 | 1 | h3 | 172.31.23.1/30 | vx-sw3 |
+| sw3 | ens6 | 172.31.24.2/30 | vx-h4 | 1004 | 2 | h4 | 172.31.24.1/30 | vx-sw3 |
+
+*Tabla 4 bis. Túneles VXLAN del slice. El uplink (`ens4`) es el puerto 1 en sw2 y el 3 en sw3; los puertos de host coinciden con los que registra M7 (`tel354:base`: hosts [2,3] y [1,2]).*
+
+**Revisión rápida.** En cada host, `ping -c 4 -W 1 172.31.2N.2` (N = 1 a 4). Si responde, no hay nada que hacer. Si falla, se monta el túnel de ese par con los bloques siguientes, primero en el switch y luego en el host.
+
+En `root@sw2:~#` ejecutar:
+
+```bash
+BR=$(ovs-vsctl list-br | head -1)
+ovs-vsctl --if-exists del-port $BR ens5; ovs-vsctl --if-exists del-port $BR ens6
+ip addr replace 172.31.21.2/30 dev ens5; ip addr replace 172.31.22.2/30 dev ens6
+ovs-vsctl --may-exist add-port $BR vx-h1 -- set interface vx-h1 type=vxlan options:remote_ip=172.31.21.1 options:local_ip=172.31.21.2 options:key=1001 ofport_request=2
+ovs-vsctl --may-exist add-port $BR vx-h2 -- set interface vx-h2 type=vxlan options:remote_ip=172.31.22.1 options:local_ip=172.31.22.2 options:key=1002 ofport_request=3
+ovs-vsctl list-ports $BR; ovs-ofctl -O OpenFlow13 show $BR | grep -E "\((ens|vx)"
+```
+
+En `root@sw3:~#` ejecutar:
+
+```bash
+BR=$(ovs-vsctl list-br | head -1)
+ovs-vsctl --if-exists del-port $BR ens5; ovs-vsctl --if-exists del-port $BR ens6
+ip addr replace 172.31.23.2/30 dev ens5; ip addr replace 172.31.24.2/30 dev ens6
+ovs-vsctl --may-exist add-port $BR vx-h3 -- set interface vx-h3 type=vxlan options:remote_ip=172.31.23.1 options:local_ip=172.31.23.2 options:key=1003 ofport_request=1
+ovs-vsctl --may-exist add-port $BR vx-h4 -- set interface vx-h4 type=vxlan options:remote_ip=172.31.24.1 options:local_ip=172.31.24.2 options:key=1004 ofport_request=2
+ovs-vsctl list-ports $BR; ovs-ofctl -O OpenFlow13 show $BR | grep -E "\((ens|vx)"
+```
+
+Resultado esperado: los puertos del bridge son `ens4` y los dos `vx-h*` (no `ens5` ni `ens6`), con los números de la Tabla 4 bis.
+
+En `root@h1:~#` ejecutar:
+
+```bash
+ip link del vx-sw2 2>/dev/null
+ip addr flush dev ens4 scope global; ip addr add 172.31.21.1/30 dev ens4
+ip link add vx-sw2 type vxlan id 1001 remote 172.31.21.2 local 172.31.21.1 dev ens4 dstport 4789; ip link set vx-sw2 up
+sleep 2; ping -c 4 -W 1 172.31.21.2
+```
+
+En `root@h2:~#` ejecutar:
+
+```bash
+ip link del vx-sw2 2>/dev/null
+ip addr flush dev ens4 scope global; ip addr add 172.31.22.1/30 dev ens4
+ip link add vx-sw2 type vxlan id 1002 remote 172.31.22.2 local 172.31.22.1 dev ens4 dstport 4789; ip link set vx-sw2 up
+sleep 2; ping -c 4 -W 1 172.31.22.2
+```
+
+En `root@h3:~#` ejecutar:
+
+```bash
+ip link del vx-sw3 2>/dev/null
+ip addr flush dev ens4 scope global; ip addr add 172.31.23.1/30 dev ens4
+ip link add vx-sw3 type vxlan id 1003 remote 172.31.23.2 local 172.31.23.1 dev ens4 dstport 4789; ip link set vx-sw3 up
+sleep 2; ping -c 4 -W 1 172.31.23.2
+```
+
+En `root@h4:~#` ejecutar:
+
+```bash
+ip link del vx-sw3 2>/dev/null
+ip addr flush dev ens4 scope global; ip addr add 172.31.24.1/30 dev ens4
+ip link add vx-sw3 type vxlan id 1004 remote 172.31.24.2 local 172.31.24.1 dev ens4 dstport 4789; ip link set vx-sw3 up
+sleep 2; ping -c 4 -W 1 172.31.24.2
+```
+
+Resultado esperado: los cuatro ping responden. En `onos@root >`, `tel354:base` muestra hosts [2,3] en sw2 y [1,2] en sw3, con 7/7 reglas y 2/2 meters.
+
+Si un ping falla, el diagnóstico es: en el switch, `timeout 10 tcpdump -eni ens5 -c 8 "arp or icmp"` mientras el host hace ping. Si llegan las ARP del host y el switch no responde, revisar con `ovs-vsctl list-ports` que `ens5` o `ens6` no hayan vuelto al bridge (OVS se lleva sus tramas antes que la pila IP) y que tengan su IP.
+
+**Qué no hacer mientras haya túneles:** `netplan apply`, `networkctl reconfigure` sobre `ens4`, `ens5` o `ens6`, ni reiniciar las VMs: devuelven la configuración del LAB5 y deshacen los túneles. `ens3` no se toca en ningún caso.
+
+**Cuando se habilite la opción A.** Ya no habrá túneles: en los switches, `ens5` y `ens6` vuelven al bridge como puertos de host (sin IP) y se borran los `vx-h*`; en los hosts, se borra `vx-swX` y `ens4` queda sin IPv4 hasta el login, que entonces se hace con `login.sh` sin argumento y entrega la IP de usuario en `ens4`. M7 detecta los puertos nuevos y les instala sus reglas 800 y meters (prueba B8).
 
 ## 6. Pruebas de M1
 
@@ -482,7 +573,7 @@ Resultado esperado: `Resultado: todas las verificaciones pasan` en ambos.
 
 ## 7 bis. Pruebas de tel354.base (M7 + M8)
 
-La app instala el régimen base al detectar cada switch: Tabla 0 (900, 800 con meter `ctl_P`, 600, 10) con el appId `tel354.m7`, y Tabla 2 fija y core con `tel354.m8`. La Tabla 1 es de M2; mientras tanto la carga el puente `base_auto.py --solo-tabla1`. Antes de empezar, cerrar sesión en los cuatro hosts (`logout.sh vx-sw2` en h1 y h2, `logout.sh vx-sw3` en h3 y h4).
+La app instala el régimen base al detectar cada switch: Tabla 0 (900, 800 con meter `ctl_P`, 600, 10) con el appId `tel354.m7`, y Tabla 2 fija y core con `tel354.m8`. La Tabla 1 es de M2: hasta la versión 1.7 la cargaba el puente `base_auto.py --solo-tabla1` (paso 15); desde la 1.8 la instala la app M2 (sección 7 quater). Antes de empezar, cerrar sesión en los cuatro hosts (`logout.sh vx-sw2` en h1 y h2, `logout.sh vx-sw3` en h3 y h4).
 
 | Prueba | Qué verifica | Paso | Captura |
 |---|---|---|---|
@@ -882,13 +973,176 @@ Resultado esperado: un incidente nuevo en N2; las reglas 300 a 302 de M5 junto a
 
 Pendientes menores, sin efecto en el funcionamiento: la app registra dos veces su configuración al arrancar; tras reconectarse un switch, el tiempo «ADDED» del log no mide una convergencia (ONOS aún marca las reglas como ADDED); y M5 espera 2 s la confirmación de su meter, que ONOS da cada 10 s, por lo que siempre avisa.
 
+## 7 quater. Pruebas de M2 y M6
+
+M2 (`tel354.m2`, `r2-autorizacion/onos-app-m2`) instala la Tabla 1 en cada switch de acceso al detectarlo (el que tiene la regla 600 de M7), la recalcula con `policy_changed` y atiende el slow-path de la regla 55: DROP 150 de 8 s y `AuthorizationDenied`. Reemplaza al puente del paso 15. M6 (`r3-ataques-encubiertos/m6-auditoria`) es, por ahora, un servicio Python en controller, fuera de ONOS: lee el log del contenedor `onos` y la REST de M5, y escribe en `auth_log` con el rol `onos_m6` (solo INSERT). Antes de empezar, comprobar los túneles (revisión rápida del paso 11 bis) y cerrar sesión en los cuatro hosts.
+
+| Prueba | Qué verifica | Paso | Captura |
+|---|---|---|---|
+| M2-1, M2-2 | Núcleo sin ONOS, compilación, activación y Tabla 1 al detectar cada switch | 25 | F48, F49 |
+| M2-3, M2-4 | R2 sin cambios y denegación con DROP 150 | 26 | F50 |
+| M2-5 | `policy_changed` sin correr scripts | 27 | F51 |
+| M2-7, M2-8 | Cierre de sesión e idempotencia al reiniciar | 28 | F52 |
+| M6-1 a M6-3 | Disparador, instalación y eventos en `auth_log` con sus referencias | 29 | F53, F54 |
+| M6-7 | Reinicio de M6 sin filas repetidas ni perdidas | 30 | F55 |
+
+*Tabla 5 quinquies. Pruebas de M2 y M6 en el slice.*
+
+### Paso 25. M2 en lugar del puente de la Tabla 1
+
+`--migrar` retira el puente (`base_auto.py --solo-tabla1 --borrar`): sus reglas y las de M2 no pueden convivir, porque OVS trata como la misma regla dos con igual tabla, prioridad y coincidencia.
+
+En `root@controller:~/tel354-campus-sdn#` ejecutar:
+
+```bash
+export TEL354_ENV=una_instancia.env
+bash r2-autorizacion/onos-app-m2/instalar_m2.sh --migrar 2>&1 | tee /root/mvn.log
+```
+
+Resultado esperado: `Todo OK` (núcleo sin ONOS), `instalada y activa` y `Estado: ACTIVE | versión 2.0.0`.
+
+En `onos@root >` ejecutar:
+
+```
+tel354:m2
+tel354:base
+```
+
+Resultado esperado: `Matriz: 13 permisos por rol` y `LISTEN policy_changed: conectado`; cada switch de acceso con su uplink, `21/21` en la Tabla 1 y nada pendiente. `tel354:base` sigue en 7/7, 7/7 y 20/20.
+
+**Captura F48:** el final de la instalación, `tel354:m2` y `tel354:base`.
+
+En `root@sw2:~#` ejecutar:
+
+```bash
+BR=$(ovs-vsctl list-br | head -1)
+ovs-ofctl -O OpenFlow13 dump-flows $BR table=1 | sed -E 's/duration=[^,]*, //; s/n_bytes=[^,]*, //' | sort -t, -k3
+ovs-ofctl -O OpenFlow13 dump-flows $BR table=1 | wc -l
+```
+
+Resultado esperado: 21 reglas (13 de prioridad 100, y 60, 58 ×2, 57, 55 ×2, 50 y 0); las dos 55 con `meter:N` (captura) y la 57 con otro meter (cuarentena). En el log (`docker logs onos 2>&1 | grep "M2:" | tail`), `Tabla 1 completa: 21 reglas (13 permisos y 8 comunes)` por switch. Si se ve `salida 50 en espera de las reglas 55 y 57`, es la falla cerrada: la 50 se agrega en la pasada siguiente, cuando las 55 y la 57 ya están en el switch.
+
+**Captura F49:** el `dump-flows` de la Tabla 1.
+
+### Paso 26. R2 sin cambios y denegación (M2-3, M2-4)
+
+En h1 ejecutar `bash r1-identidad/host/login.sh vx-sw2` (alumno01 / Alumno2026!) y luego:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" http://10.200.1.10:443/
+curl -m 3 http://10.200.1.30:5432/; echo "salida $?"
+```
+
+En `root@sw2:~#`, dentro de los 8 s siguientes, ejecutar:
+
+```bash
+ovs-ofctl -O OpenFlow13 dump-flows $BR table=1 | grep priority=150
+```
+
+Resultado esperado: el Campus Virtual responde `200`; la BD académica no responde (el alumno no tiene permiso); una regla 150 con `hard_timeout=8` para la cuádrupla `10.17.x.y → 10.200.1.30 tcp 5432`, y en el log `M2: AuthorizationDenied sesion N [alumno01 ALUMNO] -> 10.200.1.30 proto 6 puerto 5432`. Repetir el `curl` antes de 8 s no produce otra línea.
+
+**Captura F50:** h1, el `dump-flows` y la línea del log.
+
+### Paso 27. policy_changed (M2-5)
+
+Se da al rol Alumno acceso a la BD académica y luego se retira, sin correr scripts. Por la herencia de roles, el permiso alcanza también a JP: son dos reglas 100 nuevas por switch.
+
+En `root@controller:~#` ejecutar:
+
+```bash
+su postgres -c "psql -d campus -c 'INSERT INTO permiso_rol VALUES (1, 8)'"
+sleep 3; docker logs onos 2>&1 | grep "M2:" | tail -4
+su postgres -c "psql -d campus -c 'DELETE FROM permiso_rol WHERE rol_id = 1 AND recurso_id = 8'"
+sleep 3; docker logs onos 2>&1 | grep "M2:" | tail -4
+```
+
+Resultado esperado: tras el INSERT, `M2: policy_changed (1 avisos, tablas [permiso_rol])`, `matriz actualizada: 15 permisos` y `Tabla 1: +2 -0` en cada switch de acceso; tras el DELETE, `13 permisos` y `+0 -2`. Entre ambos, el `curl` del paso 26 a la 5432 ya no genera `AuthorizationDenied` (el tráfico pasa por la regla 100).
+
+**Captura F51:** las dos salidas del log.
+
+### Paso 28. Cierre de sesión e idempotencia (M2-7, M2-8)
+
+En h1 repetir el `curl` a la 5432 y, antes de 8 s, `bash r1-identidad/host/logout.sh vx-sw2`. Luego, en `onos@root >` ejecutar:
+
+```
+bundle:restart pe.edu.pucp.tel354.tel354-m2
+```
+
+En `root@controller:~#` ejecutar:
+
+```bash
+sleep 10; docker logs onos 2>&1 | grep "M2:" | tail -8
+```
+
+Resultado esperado: `M2: sesión N cerrada: 1 reglas de M2 retiradas` al cerrar la sesión; tras el reinicio, `Tabla 1 completa` por switch sin ninguna línea `Tabla 1: +… -…` ni meters nuevos (reutiliza reglas y meters).
+
+**Captura F52:** el log.
+
+### Paso 29. M6: disparador, instalación y eventos (M6-1 a M6-3)
+
+`06_m6.sql` crea el disparador que completa `usuario_id` y `dispositivo_id` dentro de la base, de modo que `onos_m6` conserva solo INSERT.
+
+En `root@controller:~/tel354-campus-sdn#` ejecutar:
+
+```bash
+su postgres -c "psql -q -d campus" < comun/db/06_m6.sql
+su postgres -c "psql -d campus -Atc \"SELECT has_table_privilege('onos_m6','auth_log','INSERT'), has_table_privilege('onos_m6','sesion','SELECT')\""
+export TEL354_ENV=una_instancia.env
+bash r3-ataques-encubiertos/m6-auditoria/instalar_m6.sh
+journalctl -u m6-auditoria -n 5 --no-pager
+```
+
+Resultado esperado: `t|f` (INSERT sí, SELECT no); `14 pruebas OK` (`Ran 14 tests … OK`), `creada /etc/tel354/m6.env para el perfil una_instancia.env`, `conexión OK` y el servicio `active (running)`; en el journal, `leyendo el log de onos`.
+
+**Captura F53:** la salida del instalador y del journal.
+
+En h1, login (alumno01), el `curl` a la 5432 y logout, como en los pasos 26 y 28. Luego, en `root@controller:~#` ejecutar:
+
+```bash
+sleep 3
+su postgres -c "psql -d campus -c \"SELECT id, evento, sesion_id, usuario_id, dispositivo_id, detalle->>'usuario' AS usuario FROM auth_log ORDER BY id DESC LIMIT 8\""
+```
+
+Resultado esperado, del más nuevo al más antiguo: `SESION_CERRADA`, `AUTORIZACION_DENEGADA`, `SESION_ACTIVA`, `SESION_AUTENTICADA` y `AUTH_ACEPTADA`; las filas con `sesion_id` tienen `usuario_id` y `dispositivo_id` completados por el disparador, y `AUTH_ACEPTADA` tiene `usuario_id` (resuelto desde el uid).
+
+**Captura F54:** la consulta.
+
+### Paso 30. Reinicio de M6 (M6-7)
+
+En h1, login y logout. Luego, en `root@controller:~#` ejecutar:
+
+```bash
+systemctl restart m6-auditoria; sleep 5
+su postgres -c "psql -d campus -c \"SELECT ts, evento, count(*) FROM auth_log WHERE ts > now() - interval '10 minutes' GROUP BY ts, evento, detalle::text HAVING count(*) > 1\""
+```
+
+Resultado esperado: ninguna fila: ningún evento quedó dos veces con el mismo instante y detalle (el reinicio sigue desde su punto de control). Los eventos del login y logout de este paso aparecen una vez cada uno.
+
+**Captura F55:** la consulta.
+
+## 7 quinquies. Resultados de la validación de M2 y M6 en el slice (13/11/2026)
+
+| Prueba | Resultado | Dato clave |
+|---|---|---|
+| M2-1, M2-2 | Pasa | Compila con Maven en controller y queda ACTIVE 2.0.0; 21/21 en la Tabla 1 de cada switch (13 permisos y 8 comunes), las 55 con el meter captura y la 57 con el de cuarentena; `tel354:base` intacto (7/7, 7/7, 20/20) |
+| M2-3, M2-4 | Pasa | Campus Virtual `200`; la 5432 se deniega con un DROP 150 de 8 s y cookie (M2, 0x02, sesión 52, contador); las retransmisiones del SYN se descartan en el switch (`n_packets=3`) sin nuevos Packet-In |
+| M2-5 | Pasa | `policy_changed` → Tabla 1 completa en ambos switches en ≈ 0,73 s (`+2 -0`: Alumno y JP por herencia); el tráfico pasa por la nueva regla 100; la reversión deja 13 permisos |
+| M2-7, M2-8 | Pasa | Al cerrar la sesión, `1 reglas de M2 retiradas`; tras `bundle:restart`, Tabla 1 completa sin ningún Flow-Mod |
+| M6-1, M6-2 | Pasa | `onos_m6` solo con INSERT (`t\|f`); 14 pruebas OK; servicio activo con el perfil de una instancia |
+| M6-3 | Pasa | Ciclo completo en `auth_log`: AUTH_ACEPTADA, SESION_AUTENTICADA, SESION_ACTIVA, AUTORIZACION_DENEGADA y SESION_CERRADA, con `usuario_id` y `dispositivo_id` completados por el disparador |
+| M6-7 | Pasa | Tras reiniciar M6, ningún evento duplicado y el ciclo nuevo registrado una vez |
+
+*Tabla 5 sexies. Resultados de M2 y M6 en el slice. Horas en UTC (Lima = UTC−5).*
+
+Observaciones: al detenerse, M2 registraba un aviso por la revisión que interrumpe su propio cierre (corregido en el código: ahora es una línea de depuración); la configuración de M2 se aplica dos veces al arrancar (solo líneas de log repetidas, pendiente 11). Antes de las pruebas, una actualización automática nocturna reinició `systemd-networkd` en varias VMs y deshizo los túneles; se volvieron a montar con el paso 11 bis.
+
 ## 8. Qué enviar si algo falla
 
 | Nivel | Evidencia |
 |---|---|
 | 1 | `/root/mvn.log` del módulo que falló |
 | 2 | Salida de `apps -a -s`, `scr:list` y `docker logs onos 2>&1 \| grep -iE "tel354\|exception" \| tail -60` |
-| 3 | La prueba, el resultado obtenido, `docker logs onos 2>&1 \| grep -E "M1:\|M5:\|M7\|M8" \| tail -40` y el `dump-flows` del switch |
+| 3 | La prueba, el resultado obtenido, `docker logs onos 2>&1 \| grep -E "M1:\|M2:\|M5:\|M7\|M8" \| tail -40` y el `dump-flows` del switch; para M6, `journalctl -u m6-auditoria -n 40` |
 
 *Tabla 6. Evidencias para corregir un fallo.*
 

@@ -129,7 +129,7 @@ ONOS 1.13 construye el identificador de cada regla a partir de la cookie y asign
 |---|---|---|---|---|
 | appId de la app dueña | 0x01 régimen base | identificador de la regla base | 0 | 900, 800, 600, 10 |
 | appId de M1 | 0x02 sesión | sesion.id | índice: 0 = 525, 1 = 505, 2 = 520, 3 = 200, 4 = 190, 5… = 110 | Reglas de la sesión |
-| appId de M2 | 0x02 sesión | sesion.id | contador cíclico (0–255) | DROP 150 |
+| appId de M2 | 0x02 sesión | sesion.id | contador cíclico (0–127) para el DROP 150; 128–255 para las 110 de carrera (inscripción posterior al inicio de la sesión) | DROP 150 y 110 de carrera |
 | appId de M2 | 0x03 rol | recurso.id | código de rol k | Permisos 100 |
 | appId de M2 | 0x04 común | identificador de la regla | 0 | 60, 58, 57, 55, 50, 0 |
 | appId de M8 | 0x05 camino | identificador del camino | 0 | Tabla 2 fija y core |
@@ -734,7 +734,7 @@ Se usa la topología base (`campus_topo_demo.py`) en modo automático, con los s
 | Hosts | h1 (alumno.demo, as1), h2 (docente.demo, as1), h3 (ti.demo, as2), h4 (jp.demo o sancion.demo, as2) |
 | Umbrales | Tabla 5, con θ~F~ = 3 |
 | Herramientas en los hosts | nmap, hping3, dsniff (arpspoof), python3-scapy, curl (se añaden a `instalar_dependencias.sh`) |
-| Carpeta del repositorio | `r3-ataques-encubiertos/`: `onos-app-m2/`, `onos-app-m3/`, `onos-app-m4a/`, `onos-app-m5/`, `onos-app-m6/`, `tests/` |
+| Carpeta del repositorio | `r3-ataques-encubiertos/`: `onos-app-m3/`, `onos-app-m4a/`, `onos-app-m5/`, `m6-auditoria/` (M6 provisional, fuera de ONOS), `tests/`; M2 en `r2-autorizacion/onos-app-m2/` |
 | Bundle común | `comun/tel354-api/` |
 
 *Tabla 24. Elementos de la maqueta de R3*

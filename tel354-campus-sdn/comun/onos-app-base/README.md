@@ -10,7 +10,7 @@ App de ONOS 2.7 que instala el régimen base de cada switch **cuando ONOS lo det
 | M8 (`tel354.m8`, 0x05) | Acceso, Tabla 2 | 200 a 10.200.0.0/16 y 180 por defecto: pop VLAN → uplink |
 | M8 (`tel354.m8`, 0x05) | Core | Por pabellón N: 210 (VLAN 100+N y VLAN 999), 205 (push 999), 200 × 6 roles (push 100+N) · 200 a servidores (MAC del controlador) · 0 drop |
 
-La **Tabla 1** (permisos 100 y las comunes 60, 58, 57, 55, 50, 0, con los meters `captura` y `cuarentena`) es de **M2** (LLSD R3, Tabla 7). Mientras M2 no la programe, se carga con el puente `base_auto.py --solo-tabla1` (appId `tel354.tabla1`). El **proxy ARP** del gateway sigue en M1, porque depende del estado de sesión.
+La **Tabla 1** (permisos 100 y las comunes 60, 58, 57, 55, 50, 0, con los meters `captura` y `cuarentena`) es de **M2** (LLSD R3, Tabla 7): la instala la app `tel354.m2` al detectar cada switch de acceso (el que tiene la regla 600 de M7). El puente `base_auto.py --solo-tabla1` (appId `tel354.tabla1`) queda para diagnóstico. El **proxy ARP** del gateway sigue en M1, porque depende del estado de sesión.
 
 Cookie: `appId | tipo | id | índice`, con id = prioridad·2¹⁶ + grupo (grupo = puerto en la 800, pabellón en el core y 0 en el resto). Por ejemplo, la 800 del puerto 3 tiene id `0x03200003`.
 
@@ -42,7 +42,7 @@ En `root@controller:~/tel354-campus-sdn#` ejecutar:
 ```bash
 export TEL354_ENV=una_instancia.env
 bash comun/onos-app-base/instalar_base.sh --migrar
-python3 r2-autorizacion/proactivo/base_auto.py --solo-tabla1
+bash r2-autorizacion/onos-app-m2/instalar_m2.sh --migrar     # Tabla 1 (retira el puente si estaba)
 ```
 
 `--migrar` retira, una sola vez, lo que dejó `base_auto.py` (reglas `tel354.base` y meters de REST). Consola: `tel354:base` (estado por switch) y `tel354:base -r` (reglas deseadas).

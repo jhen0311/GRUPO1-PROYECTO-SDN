@@ -276,8 +276,8 @@ Fuentes cotejadas: `AVZ07-TEL354_2026-2_G1` (LLSD de R1 y R2), `AVZ08-TEL354_202
 | 6 | `revocar(sesión, motivo)`, paso forzado a cuarentena con `lease4-del` | No existe | Operaciones de M1 para M5 |
 | 7 | Meter `ctl_P` en 525 y 505 | Reglas sin meter | M1 necesita el id del meter de cada puerto (convención o servicio de M7) |
 | 8 | Cierre por enlace caído y por 60 s sin DHCP | No existe | DeviceListener (PORT_UPDATED) y temporizador en M1 |
-| 9 | M6: `auth_log` | No existe | App M6 mínima |
-| 10 | Cookies del régimen base (0x01, 0x03, 0x04, 0x05) | 0x01 y 0x05: app `tel354.base` (appId `tel354.m7` y `tel354.m8`, 11/11). 0x03 y 0x04: puente REST `base_auto.py --solo-tabla1` | Falta que M2 programe la Tabla 1 (0x03 y 0x04) |
+| 9 | M6: `auth_log` | Implementado como servicio Python fuera de ONOS (provisional) y validado en el slice (13/11) | El grupo decide si pasa a ser una app de ONOS |
+| 10 | Cookies del régimen base (0x01, 0x03, 0x04, 0x05) | 0x01 y 0x05: app `tel354.base` (appId `tel354.m7` y `tel354.m8`, 11/11). 0x03 y 0x04: app `tel354.m2` (13/11, validada en el slice) | — |
 
 ### F.5. Observaciones del Informe Parcial que debe resolver el LLSD de R3
 
@@ -332,8 +332,11 @@ Sin pendientes documentales entre los cuatro documentos. Lo que queda es código
 
 | # | Pendiente | Módulo | Efecto |
 |---|---|---|---|
-| 1 | La Tabla 1 (permisos 100 y comunes) la carga el puente REST `base_auto.py --solo-tabla1`; debe programarla M2 con su `Matriz` y `policy_changed` | M2 | Un switch nuevo no recibe su Tabla 1 sin correr el puente |
+| 1 | ~~La Tabla 1 la carga el puente REST `base_auto.py --solo-tabla1`~~ **Resuelto y validado en el slice (13/11):** la programa `tel354.m2` al detectar cada switch, con `policy_changed` (VALIDACION, sección 7 quinquies) | M2 | — |
 | 2 | La configuración se registra dos veces al arrancar (carga inicial y aviso de netcfg) | M7 | Solo una línea de log repetida |
 | 3 | Tras reconectarse un switch, la línea «régimen base completo» reporta un tiempo ADDED que no mide convergencia: ONOS aún marca las reglas como ADDED | M7 | Solo la métrica del log; t_conv se mide en un switch nuevo |
 | 4 | M5 espera 2 s el estado ADDED de su meter `contencion`, que ONOS confirma cada 10 s; siempre avisa. Usar la espera de 1 s de M7 | M5 | Un aviso en el log; la contención funciona |
 | 5 | Opción A (reenvío de EAPOL en el slice): retirar los túneles VXLAN; los scripts del host pasan solos a `ens4` | Slice | Las líneas de la guía con `vx-sw2` cambian a `login.sh` sin argumento |
+| 6 | Una inscripción retirada no se aplica a las sesiones activas: la 110 que instaló M1 sigue hasta que cierra la sesión (la 110 de carrera de M2 sí se retira) | M1 | Acceso a un curso hasta el fin de la sesión |
+| 11 | La configuración de M2 se aplica dos veces al arrancar (carga inicial y aviso de netcfg): dos líneas «Tabla 1 a cargo de M2» y dos «escuchando policy_changed», la primera escucha se cierra sola | M2 | Solo líneas de log repetidas (igual que el pendiente 2 de M7) |
+| 7 | Decidir si M6 sigue fuera de ONOS o pasa a ser la app `tel354.m6` que describen el LLSD de R3 (R3-D3, 5.7) y el acuerdo 1 | Grupo | Coherencia entre diseño e implementación |

@@ -55,11 +55,11 @@ Cada módulo es una app propia de ONOS (bundle OSGi en Java) que usa solo la API
 | Módulo | Función | Estado |
 |---|---|---|
 | **M1** · Identidad y sesiones | 802.1X, sesión por rol, relay DHCP, proxy ARP del gateway | Validado en el slice |
-| **M2** · Autorización | Matriz de permisos por rol (Tabla 1) y denegaciones | En desarrollo |
+| **M2** · Autorización | Matriz de permisos por rol (Tabla 1) y denegaciones | Validado en el slice |
 | **M3** · Monitoreo | Contadores de las reglas vigiladas | Validado en el slice |
 | **M4a** · Detección | Ventanas de tiempo sobre el comportamiento de cada sesión | Implementado, por validar |
 | **M5** · Mitigación | Contención escalonada (N1, N2) y cuarentena (N3) | Validado en el slice |
-| **M6** · Auditoría | Registro de eventos de seguridad | Pendiente |
+| **M6** · Auditoría | Registro de eventos de seguridad (por ahora, servicio fuera de ONOS) | Validado en el slice |
 | **M7 + M8** · Régimen base y caminos fijos | Reglas base de cada switch y caminos del core, al detectarlo | Validado en el slice |
 
 ## Entorno de pruebas

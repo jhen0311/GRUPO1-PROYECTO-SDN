@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  tel354.m2 - M2 · Autorización (R2) · TEL354 Grupo 01
+  App OSGi para ONOS 2.7.0 (Java 11): Tabla 1 proactiva (permisos 100 y comunes) al detectar cada
+  switch de acceso, recálculo con policy_changed y slow-path de la regla 55 (DROP 150 y
+  AuthorizationDenied). Requiere tel354-api, tel354.base (M7+M8) y tel354.m1.
+  Compilar:   mvn clean install
+  Instalar:   bash r2-autorizacion/onos-app-m2/instalar_m2.sh
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.onosproject</groupId>
+        <artifactId>onos-dependencies</artifactId>
+        <version>2.7.0</version>
+    </parent>
+
+    <groupId>pe.edu.pucp.tel354</groupId>
+    <artifactId>tel354-m2</artifactId>
+    <version>2.0.0</version>
+    <packaging>bundle</packaging>
+
+    <description>M2: Tabla 1 de autorización por rol, policy_changed y slow-path de la regla 55</description>
+    <url>https://www.pucp.edu.pe</url>
+
+    <properties>
+        <!-- La guía de estilo de ONOS (checkstyle) no aplica a las apps del grupo -->
+        <checkstyle.skip>true</checkstyle.skip>
+        <onos.app.name>tel354.m2</onos.app.name>
+        <onos.app.title>TEL354 M2 - Autorización por rol (R2)</onos.app.title>
+        <onos.app.origin>PUCP TEL354 Grupo 01</onos.app.origin>
+        <onos.app.category>Security</onos.app.category>
+        <onos.app.url>https://www.pucp.edu.pe</onos.app.url>
+        <onos.app.readme>R2: Tabla 1 (permisos 100 desde v_permiso_efectivo; 60, 58, 57, 55, 50 y 0 con los
+            meters captura y cuarentena) al detectar cada switch de acceso, recálculo con policy_changed y
+            slow-path de la regla 55 (DROP 150 de 8 s y AuthorizationDenied).</onos.app.readme>
+        <onos.app.requires>org.onosproject.openflow,tel354.api,tel354.base,tel354.m1</onos.app.requires>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onos-api</artifactId>
+            <version>${onos.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onlab-osgi</artifactId>
+            <version>${onos.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onlab-misc</artifactId>
+            <version>${onos.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onos-cli</artifactId>
+            <version>${onos.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
+            <version>1.4.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.karaf.shell</groupId>
+            <artifactId>org.apache.karaf.shell.core</artifactId>
+            <version>4.2.14</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.9.10</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>pe.edu.pucp.tel354</groupId>
+            <artifactId>tel354-api</artifactId>
+            <version>2.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Driver JDBC embebido en el bundle (Java 11), con LISTEN/NOTIFY (PGConnection) -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.4</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <configuration>
+                    <instructions>
+                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
+                        <Export-Package/>
+                        <Private-Package>pe.edu.pucp.tel354.m2.*</Private-Package>
+                        <Karaf-Commands>pe.edu.pucp.tel354.m2.cli</Karaf-Commands>
+                        <Embed-Dependency>postgresql;scope=compile|runtime;inline=false</Embed-Dependency>
+                        <Embed-Transitive>false</Embed-Transitive>
+                        <Import-Package>!org.checkerframework.*,com.sun.jna*;resolution:=optional,waffle*;resolution:=optional,org.osgi.service.jdbc*;resolution:=optional,javax.naming*;resolution:=optional,*</Import-Package>
+                    </instructions>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.onosproject</groupId>
+                <artifactId>onos-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

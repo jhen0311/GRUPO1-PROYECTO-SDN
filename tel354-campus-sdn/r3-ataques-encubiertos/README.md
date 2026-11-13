@@ -11,8 +11,8 @@ Diseño de bajo nivel: [`docs/LLSD_R3.md`](docs/LLSD_R3.md) (fuente del document
 | M3 | tel354.m3 | Contadores cada 5 s (regla 301 de N2) |
 | M4a | tel354.m4a | Ventanas W₁ = 10 s y W₂ = 600 s; ThreatSuspected |
 | M5 | tel354.m5 | Evaluación, contención N0–N2 (reglas 300–302), reserva de 96 entradas, confirmación N3; API REST y comandos `tel354:*` |
-| M6 | tel354.m6 | auth_log |
+| M6 | (provisional: servicio `m6-auditoria/`, fuera de ONOS) | auth_log |
 
 Requisitos previos en M1 (LLSD, Tabla 2): proxy ARP solo del gateway con evento ArpProbe, BindingViolation de las reglas 505 y 800, eventos de sesión, revocación y paso forzado a cuarentena.
 
-Estado (v2.0, ONOS 2.7): M5 implementado (`onos-app-m5`, con API REST `/onos/campus/v1`, comandos `tel354:*` y simulación de eventos para probarlo solo); plantillas de partida que compilan contra tel354-api: `onos-app-m2` (falta la caché de la matriz), `onos-app-m3` y `onos-app-m4a` (completas). Configuración en `config/r3-netcfg.json`; instalación con `instalar_r3.sh`. Orden de implementación: Tabla 27 del LLSD. Fichas de cada módulo, acuerdos comunes y estructura prevista: [`../docs/PLAN_MODULOS.md`](../docs/PLAN_MODULOS.md).
+Estado (v2.0, ONOS 2.7): M5 implementado (`onos-app-m5`, con API REST `/onos/campus/v1`, comandos `tel354:*` y simulación de eventos para probarlo solo); `onos-app-m3` y `onos-app-m4a` (completas). M2 vive en `../r2-autorizacion/onos-app-m2` (Tabla 1, `policy_changed` y slow-path), y M6, por ahora, en `m6-auditoria/` como servicio fuera de ONOS. Configuración en `config/r3-netcfg.json`; instalación con `instalar_r3.sh`. Orden de implementación: Tabla 27 del LLSD. Fichas de cada módulo, acuerdos comunes y estructura prevista: [`../docs/PLAN_MODULOS.md`](../docs/PLAN_MODULOS.md).
