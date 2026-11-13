@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.onosproject.net.DeviceId;
 import org.onosproject.rest.AbstractWebResource;
 import pe.edu.pucp.tel354.api.r3.Filtro;
+import pe.edu.pucp.tel354.api.r3.IdsAlertService;
 import pe.edu.pucp.tel354.api.r3.IncidentAdminService;
 import pe.edu.pucp.tel354.api.r3.Incidente;
 import pe.edu.pucp.tel354.api.r3.MitigationReserveService;
@@ -69,6 +70,35 @@ public class CampusRecurso extends AbstractWebResource {
 
     private static Response error(Response.Status st, String msg) {
         return Response.status(st).entity("{\"error\": \"" + msg.replace("\"", "'") + "\"}").build();
+    }
+
+    /**
+     * Alertas de Suricata (LLSD R3, IdsAlert). El adaptador de la VM-IDS envía una por llamada:
+     * {"src_ip", "dst_ip", "dst_port", "proto", "sid", "categoria", "firma", "severidad", "sensor"}.
+     * Responde 200 si la alerta se procesó o se descartó a propósito (el adaptador no debe reintentar)
+     * y 400 si está mal formada.
+     */
+    @POST
+    @Path("ids/alertas")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response alertaIds(InputStream in) {
+        JsonNode b = cuerpo(in);
+        String p = b.path("proto").asText("tcp");
+        int proto = "udp".equalsIgnoreCase(p) ? 17 : "icmp".equalsIgnoreCase(p) ? 1 : 6;
+        IdsAlertService.Resultado r;
+        try {
+            r = get(IdsAlertService.class).alerta(b.path("src_ip").asText(""), b.path("dst_ip").asText(""),
+                    proto, b.path("dst_port").asInt(0), b.path("sid").asInt(0),
+                    b.path("categoria").asText(""), b.path("firma").asText(""),
+                    b.path("severidad").asInt(3), b.path("sensor").asText(""));
+        } catch (RuntimeException e) {
+            return error(Response.Status.SERVICE_UNAVAILABLE, "M4a no está activa");
+        }
+        if (r == IdsAlertService.Resultado.INVALIDA) {
+            return error(Response.Status.BAD_REQUEST, "Alerta del IDS inválida");
+        }
+        return ok(mapper().createObjectNode().put("resultado", r.name())).build();
     }
 
     @GET
