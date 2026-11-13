@@ -19,11 +19,13 @@ import pe.edu.pucp.tel354.api.r3.AuthorizationEvent;
 import pe.edu.pucp.tel354.api.r3.AuthorizationListener;
 import pe.edu.pucp.tel354.api.r3.AuthorizationService;
 import pe.edu.pucp.tel354.api.r3.Destino;
+import pe.edu.pucp.tel354.api.r3.IdsAlertService;
 import pe.edu.pucp.tel354.api.r3.Metrica;
 import pe.edu.pucp.tel354.api.r3.Sospecha;
 import pe.edu.pucp.tel354.api.r3.ThreatEvent;
 import pe.edu.pucp.tel354.api.r3.ThreatListener;
 import pe.edu.pucp.tel354.api.r3.ThreatService;
+import pe.edu.pucp.tel354.api.r3.TipoAtaque;
 import pe.edu.pucp.tel354.api.sesion.SesionInfo;
 import pe.edu.pucp.tel354.api.sesion.SessionEvent;
 import pe.edu.pucp.tel354.api.sesion.SessionListener;
@@ -51,8 +53,8 @@ import java.util.concurrent.TimeUnit;
  * la ventana siguiente, la evidencia nueva de la misma clave sale como THREAT_UPDATED (como
  * máximo una cada 5 s). BindingViolation se reenvía de inmediato como SUPLANTACION.
  */
-@Component(immediate = true, service = ThreatService.class)
-public class M4aManager implements ThreatService {
+@Component(immediate = true, service = {ThreatService.class, IdsAlertService.class})
+public class M4aManager implements ThreatService, IdsAlertService {
 
     public static final String APP = "tel354.m4a";
     private static final long ACTUALIZACION_MIN_MS = 5000;
@@ -333,6 +335,56 @@ public class M4aManager implements ThreatService {
         origenes.values().removeIf(Map::isEmpty);
         alertadas.values().removeIf(t -> ahora - t > w2);
         actualizadas.values().removeIf(t -> ahora - t > w2);
+    }
+
+    // ------------------------------------------------------------------ IdsAlertService
+
+    /**
+     * Alerta de Suricata (llega por la REST de M5). Se resuelve la sesión en el hilo de quien llama
+     * (SessionService es seguro entre hilos) y el resto, que toca los mapas, va al hilo de M4a.
+     */
+    @Override
+    public Resultado alerta(String srcIp, String dstIp, int proto, int puerto, int sid,
+                            String categoria, String firma, int severidad, String sensor) {
+        M4aConfig c = netcfg.getConfig(appId, M4aConfig.class);
+        TipoAtaque tipo = c != null ? c.tipoIds(sid, categoria) : null;
+        if (tipo == null) {
+            log.debug("M4a: alerta del IDS sin tipo de ataque (sid {}, categoría '{}')", sid, categoria);
+            return Resultado.NO_MAPEADA;
+        }
+        final Ip4Address origen;
+        final Ip4Address destino;
+        try {
+            origen = Ip4Address.valueOf(srcIp);
+            destino = Ip4Address.valueOf(dstIp);
+        } catch (IllegalArgumentException e) {
+            log.warn("M4a: alerta del IDS con IP inválida (sid {}): {} -> {}", sid, srcIp, dstIp);
+            return Resultado.INVALIDA;
+        }
+        SesionInfo s = sessionService.getSessionByIp(origen);
+        if (s == null) {
+            log.info("M4a: alerta del IDS sin sesión para {} (sid {}), no se atribuye", origen, sid);
+            return Resultado.SIN_SESION;
+        }
+        hilo.execute(() -> alIds(s, destino, proto, puerto, tipo, sid, firma, severidad, sensor));
+        return Resultado.ACEPTADA;
+    }
+
+    /** Hilo de M4a: convierte la alerta en Sospecha y la publica con la misma deduplicación por ventana. */
+    private void alIds(SesionInfo s, Ip4Address destino, int proto, int puerto, TipoAtaque tipo, int sid,
+                       String firma, int severidad, String sensor) {
+        long ahora = System.currentTimeMillis();
+        sesiones.put(s.id(), s);
+        primera.putIfAbsent(s.id(), ahora);
+        M4aConfig c = netcfg.getConfig(appId, M4aConfig.class);
+        int w = c != null ? c.idsVentana() : 60;
+        Destino d = new Destino(destino, proto,
+                puerto > 0 ? Collections.singleton(puerto) : Collections.<Integer>emptySet());
+        Sospecha sp = Sospecha.builder(s, Metrica.IDS).tipo(tipo).valor(1).umbral(1).ventanaSeg(w)
+                .destino(d).detalle("IDS sid=" + sid + " sev=" + severidad + " sensor=" + sensor + ": " + firma)
+                .tsPrimeraMs(ahora).tsUmbralMs(ahora).build();
+        // Una clave por (sesión, tipo): la fuerza bruta y las peticiones maliciosas no se pisan entre sí
+        publicar(s.id() + "/IDS_" + tipo + "/" + w, sp, ahora, w);
     }
 
     // ------------------------------------------------------------------ ThreatService
