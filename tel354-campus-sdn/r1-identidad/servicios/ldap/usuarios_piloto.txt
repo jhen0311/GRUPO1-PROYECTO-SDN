@@ -1,0 +1,141 @@
+# Generado por comun/db/gen_usuarios.py --n 20  (uid:nombre:contraseña)
+alumno01:Alumno de prueba 01:Alumno2026!
+alumno02:Alumno de prueba 02:Alumno2026!
+alumno03:Alumno de prueba 03:Alumno2026!
+alumno04:Alumno de prueba 04:Alumno2026!
+alumno05:Alumno de prueba 05:Alumno2026!
+alumno06:Alumno de prueba 06:Alumno2026!
+alumno07:Alumno de prueba 07:Alumno2026!
+alumno08:Alumno de prueba 08:Alumno2026!
+alumno09:Alumno de prueba 09:Alumno2026!
+alumno10:Alumno de prueba 10:Alumno2026!
+alumno11:Alumno de prueba 11:Alumno2026!
+alumno12:Alumno de prueba 12:Alumno2026!
+alumno13:Alumno de prueba 13:Alumno2026!
+alumno14:Alumno de prueba 14:Alumno2026!
+alumno15:Alumno de prueba 15:Alumno2026!
+alumno16:Alumno de prueba 16:Alumno2026!
+alumno17:Alumno de prueba 17:Alumno2026!
+alumno18:Alumno de prueba 18:Alumno2026!
+alumno19:Alumno de prueba 19:Alumno2026!
+alumno20:Alumno de prueba 20:Alumno2026!
+jp01:Jefe de practica de prueba 01:Jp2026!
+jp02:Jefe de practica de prueba 02:Jp2026!
+jp03:Jefe de practica de prueba 03:Jp2026!
+jp04:Jefe de practica de prueba 04:Jp2026!
+jp05:Jefe de practica de prueba 05:Jp2026!
+jp06:Jefe de practica de prueba 06:Jp2026!
+jp07:Jefe de practica de prueba 07:Jp2026!
+jp08:Jefe de practica de prueba 08:Jp2026!
+jp09:Jefe de practica de prueba 09:Jp2026!
+jp10:Jefe de practica de prueba 10:Jp2026!
+jp11:Jefe de practica de prueba 11:Jp2026!
+jp12:Jefe de practica de prueba 12:Jp2026!
+jp13:Jefe de practica de prueba 13:Jp2026!
+jp14:Jefe de practica de prueba 14:Jp2026!
+jp15:Jefe de practica de prueba 15:Jp2026!
+jp16:Jefe de practica de prueba 16:Jp2026!
+jp17:Jefe de practica de prueba 17:Jp2026!
+jp18:Jefe de practica de prueba 18:Jp2026!
+jp19:Jefe de practica de prueba 19:Jp2026!
+jp20:Jefe de practica de prueba 20:Jp2026!
+docente01:Docente de prueba 01:Docente2026!
+docente02:Docente de prueba 02:Docente2026!
+docente03:Docente de prueba 03:Docente2026!
+docente04:Docente de prueba 04:Docente2026!
+docente05:Docente de prueba 05:Docente2026!
+docente06:Docente de prueba 06:Docente2026!
+docente07:Docente de prueba 07:Docente2026!
+docente08:Docente de prueba 08:Docente2026!
+docente09:Docente de prueba 09:Docente2026!
+docente10:Docente de prueba 10:Docente2026!
+docente11:Docente de prueba 11:Docente2026!
+docente12:Docente de prueba 12:Docente2026!
+docente13:Docente de prueba 13:Docente2026!
+docente14:Docente de prueba 14:Docente2026!
+docente15:Docente de prueba 15:Docente2026!
+docente16:Docente de prueba 16:Docente2026!
+docente17:Docente de prueba 17:Docente2026!
+docente18:Docente de prueba 18:Docente2026!
+docente19:Docente de prueba 19:Docente2026!
+docente20:Docente de prueba 20:Docente2026!
+administrativo01:Administrativo de prueba 01:Administrativo2026!
+administrativo02:Administrativo de prueba 02:Administrativo2026!
+administrativo03:Administrativo de prueba 03:Administrativo2026!
+administrativo04:Administrativo de prueba 04:Administrativo2026!
+administrativo05:Administrativo de prueba 05:Administrativo2026!
+administrativo06:Administrativo de prueba 06:Administrativo2026!
+administrativo07:Administrativo de prueba 07:Administrativo2026!
+administrativo08:Administrativo de prueba 08:Administrativo2026!
+administrativo09:Administrativo de prueba 09:Administrativo2026!
+administrativo10:Administrativo de prueba 10:Administrativo2026!
+administrativo11:Administrativo de prueba 11:Administrativo2026!
+administrativo12:Administrativo de prueba 12:Administrativo2026!
+administrativo13:Administrativo de prueba 13:Administrativo2026!
+administrativo14:Administrativo de prueba 14:Administrativo2026!
+administrativo15:Administrativo de prueba 15:Administrativo2026!
+administrativo16:Administrativo de prueba 16:Administrativo2026!
+administrativo17:Administrativo de prueba 17:Administrativo2026!
+administrativo18:Administrativo de prueba 18:Administrativo2026!
+administrativo19:Administrativo de prueba 19:Administrativo2026!
+administrativo20:Administrativo de prueba 20:Administrativo2026!
+ti01:Analista de TI de prueba 01:TI2026!
+ti02:Analista de TI de prueba 02:TI2026!
+ti03:Analista de TI de prueba 03:TI2026!
+ti04:Analista de TI de prueba 04:TI2026!
+ti05:Analista de TI de prueba 05:TI2026!
+ti06:Analista de TI de prueba 06:TI2026!
+ti07:Analista de TI de prueba 07:TI2026!
+ti08:Analista de TI de prueba 08:TI2026!
+ti09:Analista de TI de prueba 09:TI2026!
+ti10:Analista de TI de prueba 10:TI2026!
+ti11:Analista de TI de prueba 11:TI2026!
+ti12:Analista de TI de prueba 12:TI2026!
+ti13:Analista de TI de prueba 13:TI2026!
+ti14:Analista de TI de prueba 14:TI2026!
+ti15:Analista de TI de prueba 15:TI2026!
+ti16:Analista de TI de prueba 16:TI2026!
+ti17:Analista de TI de prueba 17:TI2026!
+ti18:Analista de TI de prueba 18:TI2026!
+ti19:Analista de TI de prueba 19:TI2026!
+ti20:Analista de TI de prueba 20:TI2026!
+invitado01:Invitado de prueba 01:Invitado2026!
+invitado02:Invitado de prueba 02:Invitado2026!
+invitado03:Invitado de prueba 03:Invitado2026!
+invitado04:Invitado de prueba 04:Invitado2026!
+invitado05:Invitado de prueba 05:Invitado2026!
+invitado06:Invitado de prueba 06:Invitado2026!
+invitado07:Invitado de prueba 07:Invitado2026!
+invitado08:Invitado de prueba 08:Invitado2026!
+invitado09:Invitado de prueba 09:Invitado2026!
+invitado10:Invitado de prueba 10:Invitado2026!
+invitado11:Invitado de prueba 11:Invitado2026!
+invitado12:Invitado de prueba 12:Invitado2026!
+invitado13:Invitado de prueba 13:Invitado2026!
+invitado14:Invitado de prueba 14:Invitado2026!
+invitado15:Invitado de prueba 15:Invitado2026!
+invitado16:Invitado de prueba 16:Invitado2026!
+invitado17:Invitado de prueba 17:Invitado2026!
+invitado18:Invitado de prueba 18:Invitado2026!
+invitado19:Invitado de prueba 19:Invitado2026!
+invitado20:Invitado de prueba 20:Invitado2026!
+sancion01:Alumno sancionado de prueba 01:Sancion2026!
+sancion02:Alumno sancionado de prueba 02:Sancion2026!
+sancion03:Alumno sancionado de prueba 03:Sancion2026!
+sancion04:Alumno sancionado de prueba 04:Sancion2026!
+sancion05:Alumno sancionado de prueba 05:Sancion2026!
+sancion06:Alumno sancionado de prueba 06:Sancion2026!
+sancion07:Alumno sancionado de prueba 07:Sancion2026!
+sancion08:Alumno sancionado de prueba 08:Sancion2026!
+sancion09:Alumno sancionado de prueba 09:Sancion2026!
+sancion10:Alumno sancionado de prueba 10:Sancion2026!
+sancion11:Alumno sancionado de prueba 11:Sancion2026!
+sancion12:Alumno sancionado de prueba 12:Sancion2026!
+sancion13:Alumno sancionado de prueba 13:Sancion2026!
+sancion14:Alumno sancionado de prueba 14:Sancion2026!
+sancion15:Alumno sancionado de prueba 15:Sancion2026!
+sancion16:Alumno sancionado de prueba 16:Sancion2026!
+sancion17:Alumno sancionado de prueba 17:Sancion2026!
+sancion18:Alumno sancionado de prueba 18:Sancion2026!
+sancion19:Alumno sancionado de prueba 19:Sancion2026!
+sancion20:Alumno sancionado de prueba 20:Sancion2026!

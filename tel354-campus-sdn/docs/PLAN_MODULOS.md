@@ -14,13 +14,19 @@ TEL354 · Grupo 01 · 23/10/2026. Documento de referencia para implementar los m
 | M4b · Detección de anomalías | `tel354.m4b` | R4 | Por diseñar (LLSD de R4) | `r4-ddos/` |
 | M5 · Mitigación | `tel354.m5` | R3 a R5 | **Por implementar** (parte de R3) | `r3-ataques-encubiertos/onos-app-m5/` |
 | M6 · Auditoría | `tel354.m6` | Transversal | **Por implementar** | `r3-ataques-encubiertos/onos-app-m6/` |
-| M7 · Programación de flujos | (`onos_static.py`) | Transversal | Cubierto por script REST; **propuesta (por confirmar):** app que instala el régimen base al conectarse cada switch | `comun/onos-app-base/` (propuesta) |
-| M8 · Conectividad | (en M1 y `onos_static.py`) | R1, R2, R5 | Proxy ARP del gateway dentro de M1; reglas del core por script | — |
+| M7 · Programación de flujos | `tel354.base` (appId `tel354.m7`) | Transversal | **Implementado y validado en el slice** (12/11): Tabla 0 base y meters `ctl_P` al detectar cada switch (VALIDACION, sección 7 ter) | `comun/onos-app-base/` |
+| M8 · Conectividad | `tel354.base` (appId `tel354.m8`) y M1 | R1, R2, R5 | **Implementado y validado en el slice** (12/11): Tabla 2 fija y core; el proxy ARP del gateway sigue en M1; el edge (R5) queda para su LLSD | `comun/onos-app-base/` |
 | Adaptador del IDS | script externo | R3 (complemento), R5 | Posterior | `r5-perimetral/` |
 
-**Decisión vigente para M7 y M8.** En la maqueta, el régimen base (cookies 0x01, 0x03 a 0x05) lo instala `onos_static.py` por la API REST de ONOS, con el appId de REST. Usa la API pública, así que respeta la consigna; queda como simplificación aceptada (PENDIENTES, F.4 #10). Convertirlos en apps no bloquea R3.
+**Decisión vigente para M7 y M8 (10–11/11/2026).**
 
-**Propuesta del 26/10 (por confirmar).** Para que todo el plano de control sea dinámico, reemplazar `onos_static.py` por dos apps: **M2** asume la Tabla 1 proactiva (reglas 100 y comunes) y la recalcula con `policy_changed`, y una app **M7/M8** instala el régimen base y los caminos fijos cuando ONOS detecta cada switch (`DeviceListener`), con el appId y la cookie de su módulo. `onos_static.py` quedaría solo para diagnóstico. Las reglas siguen siendo proactivas (su número no depende de los usuarios); lo que cambia es que las gestiona el controlador.
+1. M7 y M8 forman una sola app, `tel354.base`, con un appId por módulo: `tel354.m7` (cookie 0x01: 900, 800, 600, 10 y los meters `ctl_P`) y `tel354.m8` (cookie 0x05: Tabla 2 fija y core). La app instala el régimen al detectar cada switch (`DeviceListener` y `LinkListener`) y lo concilia de forma idempotente cada 30 s. `base_auto.py` queda para diagnóstico (`--dry-run`).
+2. El rol de cada switch de acceso sale de `switch_acceso` (rol de BD `onos_m7`, solo SELECT). El core y la ruta a los servidores salen de la network config (`gen_base_netcfg.py`, desde el perfil). Sumar un pabellón es una fila: O(1) pasos manuales.
+3. La Tabla 1 (permisos 100 y comunes 60, 58, 57, 55, 50, 0, con los meters `captura` y `cuarentena`) es de **M2**, como dice el LLSD (Tabla 7). Hasta que M2 la programe, se carga con el puente `base_auto.py --solo-tabla1` (appId `tel354.tabla1`).
+4. El proxy ARP del gateway virtual (regla 800) se implementa en M1 y no en M8, porque cada respuesta depende del estado de sesión (binding IP–MAC–puerto y rol) que M1 mantiene, y sus eventos (`ArpProbe`, `BindingViolation`) forman parte de `SessionEvent`. M8 conserva la conectividad que no depende de la identidad: caminos fijos de la Tabla 2, core y edge. La carga de ARP hacia el controlador queda acotada por el meter de la regla 800.
+5. Orden de instalación: `api → base → m1 → m3 → m5` (para retirar, al revés). M1 declara `tel354.base` en `onos.app.requires`, de modo que ONOS impone ese orden.
+
+**Propuesta del 26/10 (aplicada el 11/11 en M7 y M8; falta la Tabla 1 en M2).** Para que todo el plano de control sea dinámico, reemplazar `onos_static.py` por dos apps: **M2** asume la Tabla 1 proactiva (reglas 100 y comunes) y la recalcula con `policy_changed`, y una app **M7/M8** instala el régimen base y los caminos fijos cuando ONOS detecta cada switch (`DeviceListener`), con el appId y la cookie de su módulo. `onos_static.py` quedaría solo para diagnóstico. Las reglas siguen siendo proactivas (su número no depende de los usuarios); lo que cambia es que las gestiona el controlador.
 
 ## 2. Acuerdos comunes a todos los módulos
 
@@ -158,5 +164,5 @@ bundle:list | grep tel354
 
 - M4b y las partes de M5 para R4 (limitación 910 y 120) y R5 (bloqueos del edge): según sus LLSD.
 - Adaptador del IDS Suricata (`eve.json` → API REST de M4a): posterior.
-- M7 y M8 como apps propias: según la propuesta del 26/10 (sección 1), por confirmar; mientras tanto, la maqueta sigue con `onos_static.py`.
+- Edge de R5 en M8: según el LLSD de R5.
 - Clúster de ONOS: las ventanas de M4a viven en memoria de una instancia (LLSD, sección 11).

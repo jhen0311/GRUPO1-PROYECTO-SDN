@@ -1,0 +1,11 @@
+[
+ {"nombre": "Campus Virtual (HTTPS)",    "ip": "10.200.1.10", "protocolo": "TCP", "puerto": 443},
+ {"nombre": "Campus Virtual (SSH)",      "ip": "10.200.1.10", "protocolo": "TCP", "puerto": 22},
+ {"nombre": "Biblioteca (HTTPS)",        "ip": "10.200.1.20", "protocolo": "TCP", "puerto": 443},
+ {"nombre": "BD académica",              "ip": "10.200.1.30", "protocolo": "TCP", "puerto": 5432},
+ {"nombre": "BD administrativa",         "ip": "10.200.1.40", "protocolo": "TCP", "puerto": 5432},
+ {"nombre": "Lab SDN TEL354 (ONOS GUI)", "ip": "10.200.2.10", "protocolo": "TCP", "puerto": 8181},
+ {"nombre": "Lab SDN TEL354 (SSH)",      "ip": "10.200.2.10", "protocolo": "TCP", "puerto": 22},
+ {"nombre": "Nube TEL141 (Horizon)",     "ip": "10.200.2.20", "protocolo": "TCP", "puerto": 443},
+ {"nombre": "Curso 3 (web)",             "ip": "10.200.2.30", "protocolo": "TCP", "puerto": 8000}
+]

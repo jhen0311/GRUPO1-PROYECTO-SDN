@@ -20,7 +20,7 @@ import java.util.Arrays;
  * Fase 3 de R1: relay DHCP controlado (AVZ07, sección 4). Recibe el DHCP del host por la
  * regla 525 (solo existe con sesión AUTENTICADA o ACTIVA), agrega la opción 82 con el
  * pabellón (sub-opción 1 = N) y el rol (sub-opción 2 = k) y lo reenvía a Kea desde
- * 172.16.0.10:67. Con el DHCPACK pide al GestorSesiones la activación de la sesión.
+ * la IP in-band de esta instancia (172.16.0.11, .12 o .13), puerto 67. Con el DHCPACK pide al GestorSesiones la activación de la sesión.
  */
 public class RelayDhcp {
 
@@ -69,6 +69,10 @@ public class RelayDhcp {
         if (!m.macCliente().equalsIgnoreCase(macOrigen)) {
             log.warn("M1: chaddr {} distinto de la MAC de la sesión {}: descartado", m.macCliente(), macOrigen);
             return;
+        }
+        if (m.tipo == Dhcp.DISCOVER && !s.discoverVisto) {
+            s.discoverVisto = true;                       // inicio de la fase 3 (latencia de R1)
+            log.info("M1: primer DHCPDISCOVER de {}", s);
         }
         try {
             byte[] salida = Dhcp.haciaServidor(dhcp, p.relayIp, s.pabellon, s.codigoRol());

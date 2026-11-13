@@ -15,4 +15,4 @@ Diseño de bajo nivel: [`docs/LLSD_R3.md`](docs/LLSD_R3.md) (fuente del document
 
 Requisitos previos en M1 (LLSD, Tabla 2): proxy ARP solo del gateway con evento ArpProbe, BindingViolation de las reglas 505 y 800, eventos de sesión, revocación y paso forzado a cuarentena.
 
-Estado: diseño listo; implementación según el orden de la Tabla 27 del LLSD. Fichas de cada módulo, acuerdos comunes y estructura prevista: [`../docs/PLAN_MODULOS.md`](../docs/PLAN_MODULOS.md).
+Estado (v2.0, ONOS 2.7): M5 implementado (`onos-app-m5`, con API REST `/onos/campus/v1`, comandos `tel354:*` y simulación de eventos para probarlo solo); plantillas de partida que compilan contra tel354-api: `onos-app-m2` (falta la caché de la matriz), `onos-app-m3` y `onos-app-m4a` (completas). Configuración en `config/r3-netcfg.json`; instalación con `instalar_r3.sh`. Orden de implementación: Tabla 27 del LLSD. Fichas de cada módulo, acuerdos comunes y estructura prevista: [`../docs/PLAN_MODULOS.md`](../docs/PLAN_MODULOS.md).

@@ -1,5 +1,9 @@
 # Red de campus SDN con enfoque Zero Trust · TEL354 Grupo 01
 
+> **Versión 2.0 (piloto del LAB6).** ONOS 2.7.0 en un clúster de 3 instancias (Docker), cuatro Open vSwitch con control in-band y las direcciones del LAB6 (`comun/config/slice.env`). Guías: configuración de M1, configuración y prueba de M5 y guía completa de R3 (documentos Word del grupo). La maqueta de Mininet con ONOS 1.13 sigue documentada abajo y usa `comun/config/demo.env` (`TEL354_ENV=demo.env` en los scripts de servicios).
+>
+> Novedades: `comun/tel354-api` (servicios y eventos de R1-R3), `comun/cluster` (Atomix + ONOS), `comun/topo/slice` (OVS in-band y red de servidores), M1 2.0 (clúster y v1.1 completa), `r2-autorizacion/proactivo/base_slice.py`, M5 (`r3-ataques-encubiertos/onos-app-m5`) y plantillas de M2, M3 y M4a.
+
 Prototipo de la solución de campus de TEL354 (PUCP, 2026-2): ONOS 1.13 como controlador, Open vSwitch con OpenFlow 1.3 como plano de datos y los servicios de identidad (FreeRADIUS, OpenLDAP, PostgreSQL y Kea). Ningún equipo tiene acceso a la red hasta autenticarse con 802.1X, y su acceso queda limitado a lo que permite su rol y sus cursos.
 
 El código está organizado por requerimiento. Los módulos son apps de ONOS que usan solo los servicios nativos del controlador (PacketService, FlowRuleService, DeviceAdminService y NetworkConfig); no se modifica el código de ONOS.
@@ -12,7 +16,8 @@ tel354-campus-sdn/
 │   ├── config/demo.env       parámetros de la demo (direcciones, secretos de prueba)
 │   ├── topo/                 campus_topo_demo.py: topología base en Mininet
 │   ├── db/                   modelo de datos (14 tablas), roles por componente, datos de prueba
-│   └── lib/onos_rest.py      cliente REST de ONOS y constructores de reglas
+│   ├── lib/onos_rest.py      cliente REST de ONOS y constructores de reglas
+│   └── onos-app-base/        M7 + M8 (app tel354.base): régimen base y caminos fijos al detectar cada switch
 ├── r1-identidad/             R1: autenticación y sesiones
 │   ├── onos-app-m1/          M1 (app de ONOS en Java): 802.1X, sesión, relay DHCP, proxy ARP
 │   ├── servicios/            ldap/, radius/, kea/
@@ -35,7 +40,7 @@ R1 y R2 forman el escenario base, y R3, R4 y R5 se apoyan en él (M3 consume el 
 
 | Fase | Módulo | Qué ocurre | Reglas |
 |---|---|---|---|
-| 0. Arranque | M7 + M8 + M2 (`onos_static.py`) | Régimen proactivo: core, Tablas 0–2 de acceso, meters | 900, 800, 600, 10, 100, 60, 58, 57, 55, 50, 200, 180 |
+| 0. Arranque | M7 + M8 (`tel354.base`, `comun/onos-app-base`) y M2 (Tabla 1; hoy `base_auto.py --solo-tabla1`) | Régimen proactivo al detectar cada switch: core, Tablas 0 y 2, meters `ctl_P`; Tabla 1 | 900, 800, 600, 10, 200, 180 (M7/M8) · 100, 60, 58, 57, 55, 50 (M2) |
 | 1. Autenticación | M1 | EAPOL (regla 900) ↔ RADIUS hacia FreeRADIUS; LDAP valida la contraseña y PostgreSQL da el rol | — |
 | 2. Sesión | M1 | Access-Accept → `sesion` AUTENTICADA y reglas del equipo | 525, 505 |
 | 3. Dirección IP | M1 | DHCP (525) con opción 82 → Kea → DHCPACK → `sesion` ACTIVA | 520, 110 por curso, 200, 190 |

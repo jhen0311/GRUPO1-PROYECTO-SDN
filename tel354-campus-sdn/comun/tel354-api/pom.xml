@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  tel354-api · TEL354 Grupo 01
+  Bundle común de R1-R3 para ONOS 2.7.0: interfaces de servicio, eventos, formato de la cookie
+  y constantes del pipeline. No tiene lógica ni componentes: lo instalan las apps como dependencia
+  (onos.app.requires = tel354.api).
+  Compilar:  mvn clean install          (Java 11, Maven 3.6+)
+  Instalar:  onos-app <ip> install! target/tel354-api-2.0.0.oar   (o comun/tel354-api/instalar_api.sh)
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.onosproject</groupId>
+        <artifactId>onos-dependencies</artifactId>
+        <version>2.7.0</version>
+    </parent>
+
+    <groupId>pe.edu.pucp.tel354</groupId>
+    <artifactId>tel354-api</artifactId>
+    <version>2.0.0</version>
+    <packaging>bundle</packaging>
+
+    <description>Servicios y eventos compartidos de las apps del campus SDN (R1-R3)</description>
+    <url>https://www.pucp.edu.pe</url>
+
+    <properties>
+        <!-- La guía de estilo de ONOS (checkstyle) no aplica a las apps del grupo -->
+        <checkstyle.skip>true</checkstyle.skip>
+        <onos.app.name>tel354.api</onos.app.name>
+        <onos.app.title>TEL354 API común</onos.app.title>
+        <onos.app.origin>PUCP TEL354 Grupo 01</onos.app.origin>
+        <onos.app.category>Security</onos.app.category>
+        <onos.app.url>https://www.pucp.edu.pe</onos.app.url>
+        <onos.app.readme>Interfaces SessionService, AuthorizationService, ThreatService, CounterService,
+            MitigationReserveService, IncidentService e IncidentAdminService; eventos de R1-R3; cookie.</onos.app.readme>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onos-api</artifactId>
+            <version>${onos.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onlab-misc</artifactId>
+            <version>${onos.version}</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <configuration>
+                    <instructions>
+                        <Export-Package>pe.edu.pucp.tel354.api.*</Export-Package>
+                    </instructions>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.onosproject</groupId>
+                <artifactId>onos-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

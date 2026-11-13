@@ -2,16 +2,21 @@
   "apps": {
     "tel354.m1": {
       "m1": {
-        "nasIp": "172.16.0.10",
-        "radiusIp": "10.200.0.10",
+        "nasIpPorNodo": {"onos-1": "172.16.0.11", "onos-2": "172.16.0.12", "onos-3": "172.16.0.13"},
+        "radiusIp": "10.200.3.10",
         "radiusPuerto": 1812,
         "radiusSecreto": "tel354-secreto",
-        "relayIp": "172.16.0.10",
         "keaIp": "10.200.0.13",
-        "jdbcUrl": "jdbc:postgresql://10.200.0.12:5432/campus?ssl=true&sslmode=verify-ca&sslrootcert=/etc/tel354/certs/ca.pem",
+        "keaCtrlUrl": "http://10.200.0.13:8000/",
+        "jdbcUrl": "jdbc:postgresql://10.200.3.12:5432/campus?ssl=true&sslmode=verify-ca&sslrootcert=/etc/tel354/certs/ca.pem",
         "jdbcUsuario": "onos_m1",
         "jdbcClave": "m1-demo",
-        "rebotarPuertoAlExpirar": true
+        "rebotarPuertoAlExpirar": true,
+        "autenticandoSeg": 30,
+        "sinDhcpSeg": 60,
+        "rebotePuertoSeg": 5,
+        "eapIdentidadIntervaloSeg": 30,
+        "eapIdentidadIntentos": 3
       }
     }
   }

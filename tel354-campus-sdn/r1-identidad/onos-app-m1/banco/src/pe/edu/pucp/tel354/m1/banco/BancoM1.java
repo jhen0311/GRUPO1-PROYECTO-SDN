@@ -66,13 +66,19 @@ public class BancoM1 implements Plataforma {
         }
     }
 
-    public void rebotarPuerto(String dpid, int puerto) {
-        System.out.println("REBOTE " + dpid + "/" + puerto);
+    public void rebotarPuerto(String dpid, int puerto, int segundosAbajo, Runnable alSubir) {
+        System.out.println("REBOTE " + dpid + "/" + puerto + " (" + segundosAbajo + " s)");
+        alSubir.run();
     }
 
     public static void main(String[] a) throws Exception {
         BancoM1 b = new BancoM1();
+        // El banco reproduce la maqueta de Mininet (namespaces con las direcciones del AVZ07)
         Parametros p = new Parametros();
+        p.nasIp = p.relayIp = "172.16.0.10";
+        p.radiusIp = "10.200.0.10";
+        p.keaCtrlUrl = "http://10.200.0.13:8000/";
+        p.jdbcUrl = "jdbc:postgresql://10.200.0.12:5432/campus?ssl=true&sslmode=verify-ca&sslrootcert=/etc/tel354/certs/ca.pem";
         M1Nucleo n = new M1Nucleo(p, b);
         n.iniciar();
         System.out.println("banco M1 listo");

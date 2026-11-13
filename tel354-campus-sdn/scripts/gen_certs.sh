@@ -4,9 +4,12 @@
 # PostgreSQL con TLS para M1).
 # No hace falta un servidor de certificados aparte: la CA solo firma
 # una vez, y los hosts reciben ca.pem para validar a FreeRADIUS.
-# Uso: bash scripts/gen_certs.sh [directorio_destino]
+# Uso (slice): bash scripts/gen_certs.sh [directorio_destino]
+# Uso (maqueta): TEL354_ENV=demo.env bash scripts/gen_certs.sh
+# En el slice se genera una vez (en S-IDENTIDAD) y ca.pem se copia a los hosts y al Controlador.
 # =====================================================================
 set -euo pipefail
+source "$(cd "$(dirname "$0")/.." && pwd)/comun/config/${TEL354_ENV:-slice.env}"
 OUT=${1:-/etc/tel354/certs}
 DAYS=825
 mkdir -p "$OUT" && cd "$OUT"
@@ -32,9 +35,9 @@ EOF
   rm -f "$n.csr" "$n.ext"
 }
 
-emitir radius radius.campus.pucp.edu.pe 10.200.0.10 serverAuth
-emitir ldap   ldap.campus.pucp.edu.pe   10.200.0.11 serverAuth
-emitir db     db.campus.pucp.edu.pe     10.200.0.12 serverAuth
+emitir radius radius.campus.pucp.edu.pe ${IP_RADIUS} serverAuth
+emitir ldap   ldap.campus.pucp.edu.pe   ${IP_LDAP} serverAuth
+emitir db     db.campus.pucp.edu.pe     ${IP_PG} serverAuth
 openssl dhparam -out dh 2048 2>/dev/null
 
 chmod 644 ca.pem radius.pem ldap.pem db.pem dh

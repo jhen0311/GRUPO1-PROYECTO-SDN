@@ -56,6 +56,7 @@ El controlador nunca ve la contraseña: aunque ONOS fuera comprometido, no podr�
 bash r1-identidad/onos-app-m1/instalar_m1.sh         # compilar, instalar y activar (Maven + Java 8)
 bash r1-identidad/host/entrar.sh h1                  # "encender" h1: login y luego una shell
 bash r1-identidad/host/logout.sh                     # dentro del host: EAPOL-Logoff y DHCPRELEASE
+# En las VM del slice se indica la interfaz de datos (login.sh vx-sw2); la de gestión (ens3) se rechaza
 ```
 
 En la ventana ONOS: `apps -s -a | grep tel354` y `log:tail | grep M1`.
