@@ -1,0 +1,22 @@
+# SW-A1: /etc/netplan/60-tel354.yaml (ens3 gestión + ens4 datos)
+network:
+  version: 2
+  ethernets:
+    ens3:
+      addresses:
+        - 192.168.0.23/24
+      routes:
+        - to: default
+          via: 192.168.0.1
+      nameservers:
+        addresses:
+          - 8.8.8.8
+      dhcp4: false
+      dhcp6: false
+      accept-ra: false
+      link-local: []
+    ens4:
+      dhcp4: false
+      dhcp6: false
+      accept-ra: false
+      link-local: []
